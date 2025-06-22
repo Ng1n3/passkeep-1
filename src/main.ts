@@ -1,6 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { Request, Response } from 'express';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
 
@@ -14,7 +16,21 @@ async function bootstrap() {
   app.enableCors();
   app.set('trust proxy');
   app.useLogger(logger);
-  app.setGlobalPrefix('api/v1', { exclude: ['health'] });
+  app.setGlobalPrefix('api/v1', { exclude: ['health', 'api/docs'] });
+
+  const options = new DocumentBuilder()
+    .setTitle('passKeep-1 API')
+    .setDescription('API documentation for passKeep-1')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+
+  const document = SwaggerModule.createDocument(app, options);
+  SwaggerModule.setup('api/docs', app, document);
+
+  app.use('api/docs-json', (req: Request, res: Response) => {
+    res.json(document);
+  });
 
   const port =
     app.get<ConfigService>(ConfigService).get<number>('server.port') || 3000;

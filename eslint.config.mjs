@@ -1,8 +1,9 @@
 // @ts-check
 import eslint from '@eslint/js';
-import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
+import prettierRecommended from 'eslint-plugin-prettier/recommended';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
+import importPlugin from 'eslint-plugin-import';
 
 export default tseslint.config(
   {
@@ -10,7 +11,7 @@ export default tseslint.config(
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
-  eslintPluginPrettierRecommended,
+  prettierRecommended,
   {
     languageOptions: {
       globals: {
@@ -23,6 +24,10 @@ export default tseslint.config(
         tsconfigRootDir: import.meta.dirname,
       },
     },
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+      'import': importPlugin,
+    },
   },
   {
     rules: {
@@ -30,28 +35,28 @@ export default tseslint.config(
       '@typescript-eslint/ban-ts-comment': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       'no-unused-vars': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/no-empty-interface': 'off',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-empty-interface': 'warn',
       '@typescript-eslint/no-non-null-assertion': 'off',
-      // 'import/no-restricted-paths': [
-      //   'error',
-      //   {
-      //     zones: [
-      //       {
-      //         target: './src/**/domain/**.*ts',
-      //         from: './src/**/infra/**/*.ts',
-      //       },
-      //       {
-      //         target: './src/**/domain/**.*ts',
-      //         from: './src/**/usecases/**/*.ts',
-      //       },
-      //       {
-      //         target: './src/**/domain/**.*ts',
-      //         from: './src/**/app/**/*.ts',
-      //       },
-      //     ],
-      //   },
-      // ],
+      'import/no-restricted-paths': [
+        'error',
+        {
+          zones: [
+            {
+              target: './src/**/domain/**.*ts',
+              from: './src/**/infra/**/*.ts',
+            },
+            {
+              target: './src/**/domain/**.*ts',
+              from: './src/**/usecases/**/*.ts',
+            },
+            {
+              target: './src/**/domain/**.*ts',
+              from: './src/**/app/**/*.ts',
+            },
+          ],
+        },
+      ],
     },
   },
 );
