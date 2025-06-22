@@ -4,7 +4,9 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { Logger } from 'nestjs-pino';
+// import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
+import { initializeDataSource } from './database/data-source';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -12,6 +14,16 @@ async function bootstrap() {
   });
 
   const logger = app.get<Logger>(Logger);
+
+  // const dataSource = app.get(DataSource);
+
+  try {
+    await initializeDataSource();
+    console.log('Data Source has been initialized');
+  } catch (error) {
+    console.error('Error during Data Source initialization', error);
+    process.exit(1);
+  }
 
   app.enableCors();
   app.set('trust proxy');
