@@ -1,5 +1,5 @@
 services:
-  passkeep-1:
+  passkeep-api:
     build:
       context: .
       dockerfile: 'Dockerfile'
@@ -9,9 +9,13 @@ services:
       - '4000:4000'
     environment:
       - NODE_ENV=development
+      - DATABASE_HOST=postgres
     volumes:
       - .:/usr/src/app
-      - /user/src/app/node_modules
+      - /usr/src/app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost:4000/health']
       interval: 1m30s
@@ -20,12 +24,22 @@ services:
       start_period: 30s
 
   postgres:
-    image: postgres:15-alpine
-    container_name: postgres-passkeep
+    image: postgres:17-alpine
+    container_name: postgres
     env_file:
-      - path: ./.env
-        required: true
+      - ./.env
     environment:
       - POSTGRES_USER=${DATABASE_USERNAME}
       - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
       - POSTGRES_DB=${DATABASE_NAME}
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

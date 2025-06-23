@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
+import userConfig from 'config/user.config';
 import * as joi from 'joi';
 import { LoggerModule } from 'nestjs-pino';
 import databaseConfig, { DatabaseConfig } from '../config/database.config';
 import serverConfig from '../config/server.config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   controllers: [AppController],
@@ -15,7 +17,7 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       envFilePath: ['.env'],
       isGlobal: true,
-      load: [serverConfig, databaseConfig],
+      load: [serverConfig, databaseConfig, userConfig],
       validationSchema: joi.object({
         NODE_ENV: joi
           .string()
@@ -80,6 +82,7 @@ import { AppService } from './app.service';
         };
       },
     }),
+    UsersModule,
   ],
 })
 export class AppModule {}

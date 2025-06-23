@@ -1,43 +1,3 @@
-// import { registerAs } from '@nestjs/config';
-
-// export default registerAs('database', () => {
-//   if (!process.env.DATABASE_URL) {
-//     throw new Error('DATABASE_URL is not defined');
-//   }
-//   if (!process.env.DATABASE_TYPE) {
-//     throw new Error('DATABASE_TYPE is not defined');
-//   }
-//   if (!process.env.DATABASE_HOST) {
-//     throw new Error('DATABASE_HOST is not defined');
-//   }
-//   if (!process.env.DATABASE_PORT) {
-//     throw new Error('DATABASE_PORT is not defined');
-//   }
-//   if (!process.env.DATABASE_USERNAME) {
-//     throw new Error('DATABASE_USERNAME is not defined');
-//   }
-//   if (!process.env.DATABASE_PASSWORD) {
-//     throw new Error('DATABASE_PASSWORD is not defined');
-//   }
-//   if (!process.env.DATABASE_NAME) {
-//     throw new Error('DATABASE_NAME is not defined');
-//   }
-//   return {
-//     type: process.env.DATABASE_TYPE,
-//     url: process.env.DATABASE_URL,
-//     host: process.env.DATABASE_HOST,
-//     port: parseInt(process.env.DATABASE_PORT, 10),
-//     username: process.env.DATABASE_USERNAME,
-//     password: process.env.DATABASE_PASSWORD,
-//     database: process.env.DATABASE_NAME,
-//     synchronize: process.env.DATABASE_SYNCHRONIZE === 'true',
-//     logging: process.env.DATABASE_LOGGING === 'true',
-//     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-//     migrations: [__dirname + '/../migrations/**/*{.ts,.js}'],
-//     migrationsTableName: 'migrations',
-//   };
-// });
-
 import { registerAs } from '@nestjs/config';
 import { DataSourceOptions } from 'typeorm';
 
@@ -67,8 +27,8 @@ export default registerAs('database', (): DataSourceOptions => {
   const baseConfig = {
     synchronize: process.env.DATABASE_SYNCHRONIZE === 'true',
     logging: process.env.DATABASE_LOGGING === 'true',
-    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-    migrations: [__dirname + '/../migrations/**/*{.ts,.js}'],
+    entities: ['dist/src/modules/**/entities/*.entity{.ts,.js}'],
+    migrations: ['dist/db/migrations/*.js'],
     migrationsTableName: 'migrations',
   };
 

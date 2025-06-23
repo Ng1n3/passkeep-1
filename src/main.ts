@@ -4,8 +4,8 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { Logger } from 'nestjs-pino';
-// import { DataSource } from 'typeorm';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/filters/http-execption.filter';
 import { initializeDataSource } from './database/data-source';
 
 async function bootstrap() {
@@ -14,8 +14,6 @@ async function bootstrap() {
   });
 
   const logger = app.get<Logger>(Logger);
-
-  // const dataSource = app.get(DataSource);
 
   try {
     await initializeDataSource();
@@ -29,6 +27,7 @@ async function bootstrap() {
   app.set('trust proxy');
   app.useLogger(logger);
   app.setGlobalPrefix('api/v1', { exclude: ['health', 'api/docs'] });
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   const options = new DocumentBuilder()
     .setTitle('passKeep-1 API')

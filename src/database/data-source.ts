@@ -1,5 +1,7 @@
 import { ConfigService } from '@nestjs/config';
+import * as dotenv from 'dotenv';
 import { DataSource, DataSourceOptions } from 'typeorm';
+dotenv.config();
 
 const configService = new ConfigService();
 
@@ -13,9 +15,9 @@ const getDatabaseConfig = (): DataSourceOptions => {
 
   const baseConfig = {
     synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE', false),
-    logging: configService.get<boolean>('DATABASE_LOGGING', false),
-    entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-    migrations: [__dirname + '/../migrations/**/*{.ts,.js}'],
+    logging: configService.get<boolean>('DATABASE_LOGGING', true),
+    entities: ['dist/src/modules/**/entities/*.entity{.ts,.js}'],
+    migrations: ['dist/db/migrations/*.js'],
     migrationsTableName: 'migrations',
   };
 
