@@ -1,3 +1,4 @@
+import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -28,6 +29,14 @@ async function bootstrap() {
   app.useLogger(logger);
   app.setGlobalPrefix('api/v1', { exclude: ['health', 'api/docs'] });
   app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+      validateCustomDecorators: true,
+    }),
+  );
 
   const options = new DocumentBuilder()
     .setTitle('passKeep-1 API')

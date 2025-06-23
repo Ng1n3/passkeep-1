@@ -3,83 +3,192 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
-  Patch,
   Post,
+  Put,
 } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiParam, ApiResponse } from '@nestjs/swagger';
+import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import * as SysMessages from '../../shared/constants/systemMessages';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { UserResponseDto } from './dto/user-response.dto';
+import {
+  UserResponseBody,
+  UsersListResponseBody,
+} from './dto/user-response.dto';
 import { UsersService } from './users.service';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Post('')
-  @ApiOperation({ summary: 'Create a new user' })
-  @ApiBody({ type: CreateUserDto })
-  @ApiResponse({
-    status: 201,
-    description: 'User created successfuly',
-    type: UserResponseDto,
+  private formatResponse(
+    user: any,
+    message: string,
+    statusCode: number = HttpStatus.OK,
+  ): UserResponseBody {
+    return {
+      success: true,
+      statusCode,
+      timestamp: new Date().toISOString(),
+      message,
+      path: '/users',
+      data: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        is_activated: user.is_activated,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+      },
+    };
+  }
+
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Create a new user',
+    description: 'This endpoint allows you to create a new user in the system.',
   })
-  @ApiResponse({ status: 400, description: 'Bad Request' })
-  @ApiResponse({ status: 409, description: 'Conflict- User already exists' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
+  @ApiResponse({
+    status: HttpStatus.CREATED,
+    description: SysMessages.CREATE_USER_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.CREATE_USER_ERROR,
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: SysMessages.USER_ALREADY_EXISTS,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async create(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<UserResponseBody> {
+    const user = await this.usersService.createUser(createUserDto);
+    return this.formatResponse(
+      user,
+      SysMessages.CREATE_USER_SUCCESS,
+      HttpStatus.CREATED,
+    );
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get all users' })
-  @ApiResponse({
-    status: 200,
-    description: 'List of users',
-    type: [UserResponseDto],
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get all users',
+    description: 'This endpoint retrieves a list of all users in the system.',
   })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  findAll() {
-    return this.usersService.findAll();
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.FETCH_USERS_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async findAll(): Promise<UsersListResponseBody> {
+    const users = await this.usersService.findAllUsers();
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      timestamp: new Date().toISOString(),
+      message: SysMessages.FETCH_USERS_SUCCESS,
+      path: '/users',
+      data: users.map((user) => ({
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        is_activated: user.is_activated,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+      })),
+    };
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get user by ID' })
-  @ApiParam({ name: 'id', description: 'User ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'User found',
-    type: UserResponseDto,
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get a user by ID',
+    description: 'This endpoint retrieves a user by their unique ID.',
   })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id);
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.FETCH_USERS_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async findOne(@Param('id') id: string): Promise<UserResponseBody> {
+    const user = await this.usersService.findUserById(id);
+    return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
   }
 
-  @Patch(':id')
-  @ApiOperation({ summary: 'Update user by ID' })
-  @ApiParam({ name: 'id', description: 'User ID' })
-  @ApiBody({ type: UpdateUserDto })
-  @ApiResponse({
-    status: 200,
-    description: 'User updated successfully',
-    type: UserResponseDto,
+  @Put(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Update a user by ID',
+    description:
+      'This endpoint allows you to update a user by their unique ID.',
   })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.UPDATE_USER_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.CREATE_USER_ERROR,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<UserResponseBody> {
+    const user = await this.usersService.updateUser(id, updateUserDto);
+    return this.formatResponse(user, SysMessages.UPDATE_USER_SUCCESS);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete user by ID' })
-  @ApiParam({ name: 'id', description: 'User ID' })
-  @ApiResponse({ status: 200, description: 'User deleted successfully' })
-  @ApiResponse({ status: 404, description: 'User not found' })
-  @ApiResponse({ status: 500, description: 'Internal Server Error' })
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(id);
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({
+    summary: 'Delete a user by ID',
+    description:
+      'This endpoint allows you to delete a user by their unique ID.',
+  })
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: SysMessages.DELETE_USER_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.usersService.deleteUser(id);
   }
 }
