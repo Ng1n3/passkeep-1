@@ -8,8 +8,10 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { AuthGuard } from 'src/guards/auth.guard';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -80,6 +82,8 @@ export class UsersController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get all users',
     description: 'This endpoint retrieves a list of all users in the system.',
@@ -140,6 +144,8 @@ export class UsersController {
 
   @Put(':id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update a user by ID',
     description:
@@ -171,6 +177,8 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Delete a user by ID',
     description:

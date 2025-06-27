@@ -3,11 +3,26 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as cookieParser from 'cookie-parser';
 import { Request, Response } from 'express';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module';
+import { UserDataDto } from './common/dto/user.dto';
 import { AllExceptionsFilter } from './common/filters/http-execption.filter';
 import { initializeDataSource } from './database/data-source';
+import {
+  AuthDataDto,
+  AuthResponseBody,
+  RefreshResponseBody,
+  SignoutResponseBody,
+} from './modules/auth/dto/auth-response.dto';
+import { AuthLoginDto, CreateAuthDto } from './modules/auth/dto/auth.dto';
+import { CreateUserDto } from './modules/users/dto/create-user.dto';
+import { UpdateUserDto } from './modules/users/dto/update-user.dto';
+import {
+  UserResponseBody,
+  UsersListResponseBody,
+} from './modules/users/dto/user-response.dto';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -27,8 +42,9 @@ async function bootstrap() {
   app.enableCors();
   app.set('trust proxy');
   app.useLogger(logger);
+  app.use(cookieParser());
   app.setGlobalPrefix('api/v1', { exclude: ['health', 'api/docs'] });
-  app.useGlobalFilters(new AllExceptionsFilter());
+  app.useGlobalFilters(new AllExceptionsFilter(logger));
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -45,7 +61,21 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
-  const document = SwaggerModule.createDocument(app, options);
+  const document = SwaggerModule.createDocument(app, options, {
+    extraModels: [
+      AuthDataDto,
+      AuthLoginDto,
+      CreateAuthDto,
+      AuthResponseBody,
+      RefreshResponseBody,
+      SignoutResponseBody,
+      CreateUserDto,
+      UpdateUserDto,
+      UsersListResponseBody,
+      UserDataDto,
+      UserResponseBody,
+    ],
+  });
   SwaggerModule.setup('api/docs', app, document);
 
   app.use('api/docs-json', (req: Request, res: Response) => {

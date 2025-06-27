@@ -1,0 +1,240 @@
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Res,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { Response } from 'express';
+import { SetCookie } from 'src/common/decorators/cookie.decorator';
+import { CurrentUser } from 'src/common/decorators/current-user.decorator';
+import { AuthGuard } from 'src/guards/auth.guard';
+import { CookieInterceptor } from 'src/shared/interceptors/cookie.interceptor';
+import * as SysMessages from '../../shared/constants/systemMessages';
+import { JwtPayload } from '../../utils/jwt.utils';
+import { CookieService } from '../cookies/cookies.service';
+import { AuthService } from './auth.service';
+import {
+  AuthResponseBody,
+  RefreshResponseBody,
+  SignoutResponseBody,
+} from './dto/auth-response.dto';
+import { AuthLoginDto, CreateAuthDto } from './dto/auth.dto';
+
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly cookieService: CookieService,
+  ) {}
+
+  private formatResponse(
+    user: any,
+    message: string,
+    statusCode = HttpStatus.OK,
+    path: string,
+    tokens: { accessToken: string; refreshToken?: string },
+  ): AuthResponseBody {
+    return {
+      success: true,
+      statusCode,
+      timestamp: new Date().toISOString(),
+      message,
+      path: `/auth/${path}`,
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          is_activated: user.is_activated,
+          createdAt: user.created_at.toISOString(),
+          updatedAt: user.updated_at.toISOString(),
+        },
+        tokens: {
+          access_token: tokens.accessToken,
+          refresh_token: tokens.refreshToken,
+        },
+      },
+    };
+  }
+
+  @Post('register')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(CookieInterceptor)
+  @SetCookie('refresh_token', { maxAge: 7 * 24 * 60 * 60 * 1000 })
+  @ApiOperation({
+    summary: 'Sign up an account',
+    description: 'This endpoint allows you to create a new user in the system',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.SIGNUP_SUCCESSFUL,
+    type: AuthResponseBody,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.CREATE_USER_ERROR,
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: SysMessages.USER_ALREADY_EXISTS,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async create(
+    @Body() createAuthDto: CreateAuthDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseBody> {
+    const { user, accessToken, refreshToken } =
+      await this.authService.create(createAuthDto);
+
+    this.cookieService.setRefreshTokenCookie(res, refreshToken);
+
+    return this.formatResponse(
+      user,
+      SysMessages.SIGNUP_SUCCESSFUL,
+      HttpStatus.OK,
+      'register',
+      { accessToken, refreshToken },
+    );
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Authenticate user',
+    description: 'Logs in a user and returns access and refresh tokens',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.SIGNIN_SUCCESSFUL,
+    type: AuthResponseBody,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.INVALID_CREDENTIAL,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: SysMessages.ACCOUNT_NOT_ACTIVATED,
+  })
+  @ApiResponse({
+    status: HttpStatus.TOO_MANY_REQUESTS,
+    description: SysMessages.TOO_MANY_ATTEMPTS,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async login(
+    @Body() loginDto: AuthLoginDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseBody> {
+    const { user, accessToken, refreshToken } =
+      await this.authService.login(loginDto);
+
+    if (refreshToken) {
+      this.cookieService.setRefreshTokenCookie(res, refreshToken);
+    }
+
+    return this.formatResponse(
+      user,
+      SysMessages.SIGNIN_SUCCESSFUL,
+      HttpStatus.OK,
+      'login',
+      { accessToken, refreshToken: refreshToken || undefined },
+    );
+  }
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Refresh access token',
+    description: 'Generates a new access token using a valid refresh token',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.TOKEN_REFRESHED_SUCCESSFUL,
+    type: RefreshResponseBody,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.REFRESH_TOKEN_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: SysMessages.INVALID_REFRESH_TOKEN,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async refreshToken(
+    @Body('refresh_token') refreshToken: string,
+  ): Promise<RefreshResponseBody> {
+    const { accessToken } = await this.authService.refreshToken(refreshToken);
+
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      timestamp: new Date().toISOString(),
+      path: '/auth/refresh',
+      message: SysMessages.TOKEN_REFRESHED_SUCCESSFUL,
+      data: {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      },
+    };
+  }
+
+  @Post('signout')
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Sign out user',
+    description:
+      "Invalidates the current user's refresh token and signs them out",
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.SIGN_OUT_SUCCESSFUL,
+    type: SignoutResponseBody,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: SysMessages.ALREADY_SIGNED_OUT,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: SysMessages.UNAUTHORIZED,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async signout(@CurrentUser() user: JwtPayload): Promise<SignoutResponseBody> {
+    await this.authService.signout(user.id);
+
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      timestamp: new Date().toISOString(),
+      message: SysMessages.SIGN_OUT_SUCCESSFUL,
+      path: '/auth/signout',
+      data: null,
+    };
+  }
+}

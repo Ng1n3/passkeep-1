@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Logger } from 'nestjs-pino';
 import { PasswordConfig } from 'src/utils/user.utils';
 import { Repository } from 'typeorm';
 import * as SysMessages from '../../shared/constants/systemMessages';
@@ -14,11 +17,15 @@ import { User } from './entities/user.entity';
 
 @Injectable()
 export class UsersService {
+  private readonly logger: Logger;
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
     private readonly passwordConfig: PasswordConfig,
-  ) {}
+    logger: Logger,
+  ) {
+    this.logger = logger;
+  }
 
   async createUser(createUserDto: CreateUserDto): Promise<User> {
     try {
@@ -26,6 +33,15 @@ export class UsersService {
         createUserDto.username,
         createUserDto.email,
       );
+
+      const passwordConfirm = this.confirmPassword(
+        createUserDto.password,
+        createUserDto.password_confirm,
+      );
+
+      if (!passwordConfirm) {
+        throw new BadRequestException(SysMessages.PASSWORD_UNMATCHED);
+      }
 
       const user = this.userRepository.create({
         ...createUserDto,
@@ -125,6 +141,78 @@ export class UsersService {
     }
   }
 
+  async updatedUserRefreshToken(
+    userId: string,
+    refreshToken: string,
+  ): Promise<User> {
+    try {
+      const user = await this.findUserById(userId);
+      if (!user) {
+        throw new NotFoundException(`User with id ${userId} not found`);
+      }
+
+      return this.userRepository.save({
+        ...user,
+        refresh_token: refreshToken,
+      });
+    } catch (error: any) {
+      console.error(`Error updating user refreshToken: ${error}`);
+      throw new InternalServerErrorException(
+        'Failed to update user refresh token',
+      );
+    }
+  }
+
+  async findByRefreshToken(refreshToken: string): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { refresh_token: refreshToken },
+      });
+
+      if (!user) {
+        throw new NotFoundException(
+          `user with refreshToken ${refreshToken} not found`,
+        );
+      }
+
+      return user;
+    } catch (error: any) {
+      console.error('Error finding user by refreshToken', error.message);
+      throw new InternalServerErrorException(
+        'Error finding user by refreshToken',
+      );
+    }
+  }
+
+  async clearRefreshToken(userId: string) {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) {
+        this.logger.warn(SysMessages.USER_NOT_FOUND);
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
+      }
+
+      await this.userRepository.update(userId, {
+        refresh_token: null,
+        last_signout_at: new Date(),
+      });
+    } catch (error: any) {
+      this.logger.error({
+        message: SysMessages.CLEAR_REFRESH_TOKEN_ERROR,
+        error: error.message,
+        stack: error.stack,
+        email: null,
+      });
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        SysMessages.CLEAR_REFRESH_TOKEN_ERROR,
+      );
+    }
+  }
+
   private async validateUniqueConstraints(
     username: string,
     email: string,
@@ -142,5 +230,9 @@ export class UsersService {
     if (existingEmail) {
       throw new ConflictException('User with this email already exists');
     }
+  }
+
+  private confirmPassword(password_1: string, password_2: string): boolean {
+    return password_1 === password_2;
   }
 }

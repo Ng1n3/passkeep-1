@@ -7,17 +7,17 @@ import {
   MinLength,
 } from 'class-validator';
 
-export class CreateUserDto {
+export class CreateAuthDto {
   @ApiProperty({
     description: 'User email address',
-    example: 'user@example.com',
+    example: 'test@test.com',
   })
   @IsEmail({}, { message: 'Please enter a valid email address' })
   email: string;
 
   @ApiProperty({
     description: 'Username for this account',
-    example: 'sam_lex',
+    example: 'test',
     minLength: 3,
     maxLength: 20,
   })
@@ -32,7 +32,7 @@ export class CreateUserDto {
 
   @ApiProperty({
     description: 'Password for this account',
-    example: 'Master_Pas$word',
+    example: 'Master_Pa5$word',
     minLength: 8,
     maxLength: 30,
   })
@@ -46,8 +46,24 @@ export class CreateUserDto {
 
   @ApiProperty({
     description: 'Password confirmation',
-    example: 'Master_Pas$word',
+    example: 'Master_Pa5$word',
   })
   @IsString()
   password_confirm: string;
+}
+
+export class AuthLoginDto {
+  @ApiProperty({
+    description: 'User email address',
+    example: 'user@example.com',
+  })
+  @IsEmail({}, { message: 'Please enter a valid email address' })
+  email: string;
+
+  @ApiProperty({
+    description: 'Password for this account',
+    example: 'Master_Pas$word',
+  })
+  @IsString()
+  password: string;
 }

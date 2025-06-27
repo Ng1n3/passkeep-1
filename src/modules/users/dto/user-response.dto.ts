@@ -1,24 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-
-export class UserDataDto {
-  @ApiProperty()
-  id: string;
-
-  @ApiProperty()
-  username: string;
-
-  @ApiProperty()
-  email: string;
-
-  @ApiProperty()
-  is_activated: boolean;
-
-  @ApiProperty()
-  createdAt: Date;
-
-  @ApiProperty()
-  updatedAt: Date;
-}
+import { UserDataDto } from 'src/common/dto/user.dto';
 
 export class UserResponseBody {
   @ApiProperty()
