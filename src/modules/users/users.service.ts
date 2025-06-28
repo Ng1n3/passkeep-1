@@ -105,16 +105,16 @@ export class UsersService {
       if (findUserDto.email) {
         whereClause.email = findUserDto.email;
       }
-      if (findUserDto.refreshToken) {
-        whereClause.refresh_token = findUserDto.refreshToken;
+      if (findUserDto.refresh_token) {
+        whereClause.refresh_token = findUserDto.refresh_token;
       }
 
       if (Object.keys(whereClause).length === 0) {
         this.logger.error({
-          message: 'No valid search criteria provided',
+          message: SysMessages.INVALID_SEARCH_CREDENTIALS,
           searchCriteria: findUserDto,
         });
-        throw new BadRequestException('No valid search criteria provided');
+        throw new BadRequestException(SysMessages.INVALID_SEARCH_CREDENTIALS);
       }
 
       const user = await this.userRepository.findOne({ where: whereClause });
@@ -126,10 +126,13 @@ export class UsersService {
       this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
       return user;
     } catch (error: any) {
-      const errMessage =
-        error instanceof NotFoundException
-          ? SysMessages.USER_NOT_FOUND
-          : SysMessages.FETCH_USER_ERROR;
+      let errMessage = SysMessages.FETCH_USER_ERROR;
+
+      if (error instanceof NotFoundException) {
+        errMessage = SysMessages.USER_NOT_FOUND;
+      } else if (error instanceof BadRequestException) {
+        errMessage = SysMessages.INVALID_SEARCH_CREDENTIALS;
+      }
 
       this.logger.error({
         message: errMessage,

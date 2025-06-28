@@ -81,7 +81,7 @@ describe('UsersService', () => {
     jest.clearAllMocks();
   });
 
-  describe('createUser', () => {
+  describe('UserService - createUser', () => {
     const createUserDto: CreateUserDto = {
       email: 'test@test.com',
       username: 'test',
@@ -192,7 +192,7 @@ describe('UsersService', () => {
     });
   });
 
-  describe('Get all users', () => {
+  describe('UserService - findAllUser', () => {
     it('shold return all users successfully and log success', async () => {
       const mockUsers: User[] = [
         {
@@ -416,6 +416,113 @@ describe('UsersService', () => {
           code: null,
           stack: expect.stringContaining('NotFoundException'),
           error: 'User not found',
+        }),
+      );
+    });
+  });
+
+  describe('UserService - findUser', () => {
+    const mockUser: User = {
+      id: '1',
+      username: 'test',
+      email: 'test@test.com',
+      password: 'hashedPassword',
+      is_activated: false,
+      refresh_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
+      last_signout_at: null,
+      created_at: expect.any(Date),
+      updated_at: expect.any(Date),
+    };
+    it('Should return user when found by id', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await userService.findUser({ id: '1' });
+
+      expect(result).toEqual(mockUser);
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
+      expect(logger.log).toHaveBeenCalledWith(SysMessages.FETCH_USERS_SUCCESS);
+    });
+
+    it('Should return user when found by email', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await userService.findUser({ email: 'test@test.com' });
+
+      expect(result).toEqual(mockUser);
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { email: 'test@test.com' },
+      });
+      expect(logger.log).toHaveBeenCalledWith(SysMessages.FETCH_USERS_SUCCESS);
+    });
+
+    it('Should return user when found by email', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await userService.findUser({
+        refresh_token:
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
+      });
+
+      expect(result).toEqual(mockUser);
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: {
+          refresh_token:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
+        },
+      });
+      expect(logger.log).toHaveBeenCalledWith(SysMessages.FETCH_USERS_SUCCESS);
+    });
+
+    it('Should throw BadRequestException if no search criteria provided', async () => {
+      await expect(userService.findUser({})).rejects.toThrow(
+        BadRequestException,
+      );
+
+      expect(userRepository.findOne).not.toHaveBeenCalled();
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.INVALID_SEARCH_CREDENTIALS,
+          searchCriteria: {},
+        }),
+      );
+    });
+
+    it('Should throw NotFoundException if user not found', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(userService.findUser({ id: '999' })).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { id: '999' },
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+        }),
+      );
+    });
+
+    it('Should throw InternalServerErrorException if repository throws error', async () => {
+      (userRepository.findOne as jest.Mock).mockRejectedValue(
+        new Error('DB connection error'),
+      );
+
+      await expect(userService.findUser({ id: '1' })).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.FETCH_USER_ERROR,
+          error: 'DB connection error',
         }),
       );
     });

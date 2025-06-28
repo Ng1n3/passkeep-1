@@ -18,6 +18,12 @@ import {
 } from './modules/auth/dto/auth-response.dto';
 import { AuthLoginDto, CreateAuthDto } from './modules/auth/dto/auth.dto';
 import { CreateUserDto } from './modules/users/dto/create-user.dto';
+import {
+  FindUserByEmailDto,
+  FindUserByIdDto,
+  FindUserByRefreshTokenDto,
+  FindUserDto,
+} from './modules/users/dto/find-user.dto';
 import { UpdateUserDto } from './modules/users/dto/update-user.dto';
 import {
   UserResponseBody,
@@ -74,6 +80,10 @@ async function bootstrap() {
       UsersListResponseBody,
       UserDataDto,
       UserResponseBody,
+      FindUserByEmailDto,
+      FindUserByIdDto,
+      FindUserByRefreshTokenDto,
+      FindUserDto,
     ],
   });
   SwaggerModule.setup('api/docs', app, document);

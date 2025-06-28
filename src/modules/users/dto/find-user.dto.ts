@@ -23,7 +23,7 @@ export class FindUserDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty({ message: 'Refresh token cannot be empty' })
-  refreshToken?: string;
+  refresh_token?: string;
 
   @ValidateIf((o) => !o.id && !o.email && !o.refreshToken)
   @IsNotEmpty({

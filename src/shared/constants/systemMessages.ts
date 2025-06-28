@@ -37,3 +37,4 @@ export const CAN_ACTIVATE_ERROR =
   'There was an error from the Auth Guard in can_Activate';
 export const INVALID_ACCESSTOKEN =
   'Invalid or expired access authentication token';
+export const INVALID_SEARCH_CREDENTIALS = 'No valid search credential provided';
