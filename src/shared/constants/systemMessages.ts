@@ -38,3 +38,4 @@ export const CAN_ACTIVATE_ERROR =
 export const INVALID_ACCESSTOKEN =
   'Invalid or expired access authentication token';
 export const INVALID_SEARCH_CREDENTIALS = 'No valid search credential provided';
+export const TOKEN_CLEAR_SUCCESSFUL = 'Token successfully cleard';

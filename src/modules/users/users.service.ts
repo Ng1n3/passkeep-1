@@ -306,7 +306,7 @@ export class UsersService {
     try {
       const user = await this.userRepository.findOne({ where: { id: userId } });
       if (!user) {
-        this.logger.warn(SysMessages.USER_NOT_FOUND);
+        this.logger.error(SysMessages.USER_NOT_FOUND);
         throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
 
@@ -314,6 +314,8 @@ export class UsersService {
         refresh_token: null,
         last_signout_at: new Date(),
       });
+
+      this.logger.log(SysMessages.TOKEN_CLEAR_SUCCESSFUL);
     } catch (error: any) {
       this.logger.error({
         message: SysMessages.CLEAR_REFRESH_TOKEN_ERROR,

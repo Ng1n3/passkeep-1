@@ -39,6 +39,7 @@ describe('UsersService', () => {
           updated_at: new Date(),
         }),
       ),
+      update: jest.fn(), // Add this line to mock the update method
     };
 
     const mockPasswordConfig = {
@@ -523,6 +524,83 @@ describe('UsersService', () => {
         expect.objectContaining({
           message: SysMessages.FETCH_USER_ERROR,
           error: 'DB connection error',
+        }),
+      );
+    });
+  });
+
+  describe('UserService - clearRefreshToken', () => {
+    const userId = '1';
+    const mockUser: User = {
+      id: userId,
+      username: 'test',
+      email: 'test@test.com',
+      password: 'hashedPassword',
+      is_activated: true,
+      refresh_token: 'some-refresh-token',
+      last_signout_at: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+
+    it('should clear refresh token successfully', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
+      (userRepository.update as jest.Mock).mockResolvedValue({});
+
+      await userService.clearRefreshToken(userId);
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { id: userId },
+      });
+      expect(userRepository.update).toHaveBeenCalledWith(userId, {
+        refresh_token: null,
+        last_signout_at: expect.any(Date),
+      });
+      expect(logger.log).toHaveBeenCalledWith(
+        SysMessages.TOKEN_CLEAR_SUCCESSFUL,
+      );
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(userService.clearRefreshToken(userId)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(SysMessages.USER_NOT_FOUND);
+      expect(userRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('should throw InternalServerErrorException on unexpected error', async () => {
+      (userRepository.findOne as jest.Mock).mockRejectedValue(
+        new Error('Database down'),
+      );
+
+      await expect(userService.clearRefreshToken(userId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.CLEAR_REFRESH_TOKEN_ERROR,
+          error: 'Database down',
+        }),
+      );
+    });
+
+    it('should rethrow HttpException (e.g. NotFoundException)', async () => {
+      const customError = new NotFoundException(SysMessages.USER_NOT_FOUND);
+      (userRepository.findOne as jest.Mock).mockRejectedValue(customError);
+
+      await expect(userService.clearRefreshToken(userId)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.CLEAR_REFRESH_TOKEN_ERROR,
+          error: SysMessages.USER_NOT_FOUND,
         }),
       );
     });
