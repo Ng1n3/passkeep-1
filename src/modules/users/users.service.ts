@@ -12,6 +12,12 @@ import { Repository } from 'typeorm';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import { PasswordConfig } from '../../utils/user.utils';
 import { CreateUserDto } from './dto/create-user.dto';
+import {
+  FindUserByEmailDto,
+  FindUserByIdDto,
+  FindUserByRefreshTokenDto,
+  FindUserDto,
+} from './dto/find-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
 
@@ -59,6 +65,8 @@ export class UsersService {
         message: SysMessages.CREATE_USER_ERROR,
         error: error.message,
         stack: error.stack,
+        name: error.name,
+        code: error.code || null,
         email: createUserDto.email,
       });
       if (error instanceof HttpException) {
@@ -87,44 +95,133 @@ export class UsersService {
     }
   }
 
-  async findUserById(id: string): Promise<User> {
+  async findUser(findUserDto: FindUserDto): Promise<User> {
     try {
-      const user = await this.userRepository.findOne({ where: { id } });
-      if (!user) {
-        throw new NotFoundException(`User with id ${id} not found`);
+      const whereClause: Record<string, any> = {};
+
+      if (findUserDto.id) {
+        whereClause.id = findUserDto.id;
       }
+      if (findUserDto.email) {
+        whereClause.email = findUserDto.email;
+      }
+      if (findUserDto.refreshToken) {
+        whereClause.refresh_token = findUserDto.refreshToken;
+      }
+
+      if (Object.keys(whereClause).length === 0) {
+        this.logger.error({
+          message: 'No valid search criteria provided',
+          searchCriteria: findUserDto,
+        });
+        throw new BadRequestException('No valid search criteria provided');
+      }
+
+      const user = await this.userRepository.findOne({ where: whereClause });
+
+      if (!user) {
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
+      }
+
+      this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
       return user;
     } catch (error: any) {
-      if (error instanceof NotFoundException) {
+      const errMessage =
+        error instanceof NotFoundException
+          ? SysMessages.USER_NOT_FOUND
+          : SysMessages.FETCH_USER_ERROR;
+
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        searchCriteria: findUserDto,
+      });
+
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
-      console.error(SysMessages.FETCH_USER_ERROR, error);
+
       throw new InternalServerErrorException(SysMessages.FETCH_USER_ERROR);
     }
   }
 
-  async findUserByEmail(email: string): Promise<User> {
+  async findUserById(userID: FindUserByIdDto): Promise<User> {
     try {
-      const user = await this.userRepository.findOne({ where: { email } });
+      const user = await this.userRepository.findOne({
+        where: { id: userID.id },
+      });
       if (!user) {
-        throw new NotFoundException(`User with email ${email} not found`);
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
+      this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
       return user;
     } catch (error: any) {
+      const errMessage =
+        error instanceof NotFoundException
+          ? SysMessages.USER_NOT_FOUND
+          : SysMessages.FETCH_USER_ERROR;
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
       if (error instanceof NotFoundException) {
         throw error;
       }
-      console.error(SysMessages.FETCH_USER_ERROR, error);
       throw new InternalServerErrorException(SysMessages.FETCH_USER_ERROR);
     }
   }
 
-  async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<User> {
+  async findUserByEmail(userEmail: FindUserByEmailDto): Promise<User> {
     try {
-      const user = await this.findUserById(id);
+      const user = await this.userRepository.findOne({
+        where: { email: userEmail.email },
+      });
+      if (!user) {
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
+      }
+
+      this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
+      return user;
+    } catch (error: any) {
+      const errMessage =
+        error instanceof NotFoundException
+          ? SysMessages.USER_NOT_FOUND
+          : SysMessages.FETCH_USER_ERROR;
+
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(SysMessages.FETCH_USER_ERROR);
+    }
+  }
+
+  async updateUser(
+    userID: FindUserByIdDto,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    try {
+      const user = await this.findUserById(userID);
 
       if (!user) {
-        throw new NotFoundException(`User with this id ${id} does not exist`);
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
 
       if (updateUserDto.password) {
@@ -143,11 +240,11 @@ export class UsersService {
     }
   }
 
-  async deleteUser(id: string): Promise<void> {
+  async deleteUser(userID: FindUserByIdDto): Promise<void> {
     try {
-      const user = await this.findUserById(id);
+      const user = await this.findUserById(userID);
       if (!user) {
-        throw new NotFoundException(`User with this id ${id} does not exist`);
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
       await this.userRepository.remove(user);
     } catch (error: any) {
@@ -164,9 +261,9 @@ export class UsersService {
     refreshToken: string,
   ): Promise<User> {
     try {
-      const user = await this.findUserById(userId);
+      const user = await this.findUserById({ id: userId });
       if (!user) {
-        throw new NotFoundException(`User with id ${userId} not found`);
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
 
       return this.userRepository.save({
@@ -181,16 +278,16 @@ export class UsersService {
     }
   }
 
-  async findByRefreshToken(refreshToken: string): Promise<User> {
+  async findUserByRefreshToken(
+    refreshTokenDto: FindUserByRefreshTokenDto,
+  ): Promise<User> {
     try {
       const user = await this.userRepository.findOne({
-        where: { refresh_token: refreshToken },
+        where: { refresh_token: refreshTokenDto.refreshToken },
       });
 
       if (!user) {
-        throw new NotFoundException(
-          `user with refreshToken ${refreshToken} not found`,
-        );
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
 
       return user;

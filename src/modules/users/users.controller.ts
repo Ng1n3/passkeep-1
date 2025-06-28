@@ -8,12 +8,19 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthGuard } from '../../guards/auth.guard';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import { CreateUserDto } from './dto/create-user.dto';
+import {
+  FindUserByEmailDto,
+  FindUserByIdDto,
+  FindUserByRefreshTokenDto,
+  FindUserDto,
+} from './dto/find-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import {
   UserResponseBody,
@@ -137,8 +144,90 @@ export class UsersController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
-  async findOne(@Param('id') id: string): Promise<UserResponseBody> {
-    const user = await this.usersService.findUserById(id);
+  async findOne(
+    @Param('id') findUserDto: FindUserByIdDto,
+  ): Promise<UserResponseBody> {
+    const user = await this.usersService.findUserById(findUserDto);
+    return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
+  }
+
+  @Post('find')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Find a user by ID, email, or refresh token',
+    description:
+      'This endpoint finds a user using any combination of ID, email, or refresh token.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.FETCH_USERS_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.INVALID_CREDENTIAL,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.FETCH_USER_ERROR,
+  })
+  async findUser(@Body() findUserDto: FindUserDto): Promise<UserResponseBody> {
+    const user = await this.usersService.findUser(findUserDto);
+    return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
+  }
+
+  @Get('email')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Find user by email',
+    description: 'This endpoint retrieves a user by their email address.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.FETCH_USERS_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async findUserByEmail(
+    @Query() findUserByEmailDto: FindUserByEmailDto,
+  ): Promise<UserResponseBody> {
+    const user = await this.usersService.findUserByEmail(findUserByEmailDto);
+    return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
+  }
+
+  @Get('refresh-token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Find user by refresh token',
+    description: 'This endpoint retrieves a user by their refresh token.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.FETCH_USERS_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async findUserByRefreshToken(
+    @Query() findUserByRefreshTokenDto: FindUserByRefreshTokenDto,
+  ): Promise<UserResponseBody> {
+    const user = await this.usersService.findUserByRefreshToken(
+      findUserByRefreshTokenDto,
+    );
     return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
   }
 
@@ -168,7 +257,7 @@ export class UsersController {
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
   async update(
-    @Param('id') id: string,
+    @Param('id') id: FindUserByIdDto,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserResponseBody> {
     const user = await this.usersService.updateUser(id, updateUserDto);
@@ -196,7 +285,7 @@ export class UsersController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
-  async remove(@Param('id') id: string): Promise<void> {
+  async remove(@Param('id') id: FindUserByIdDto): Promise<void> {
     await this.usersService.deleteUser(id);
   }
 }

@@ -18,6 +18,6 @@ export class User extends AbstractBaseEntity {
   @Column({ nullable: true, type: 'varchar', default: null })
   refresh_token: string | null;
 
-  @Column({ nullable: true, default: null })
+  @Column({ nullable: true, default: null, type: 'date' })
   last_signout_at: Date | null;
 }

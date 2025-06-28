@@ -58,7 +58,9 @@ export class AuthService {
 
   async login(loginDetails: AuthLoginDto): Promise<AuthLoginResponse> {
     try {
-      const user = await this.userService.findUserByEmail(loginDetails.email);
+      const user = await this.userService.findUserByEmail({
+        email: loginDetails.email,
+      });
       if (!user) {
         this.logger.warn(SysMessages.INVALID_CREDENTIAL);
         throw new BadRequestException(SysMessages.INVALID_CREDENTIAL);
@@ -113,7 +115,9 @@ export class AuthService {
 
     try {
       const decoded = JwtUtils.verifyRefreshToken(refreshToken);
-      const user = await this.userService.findByRefreshToken(refreshToken);
+      const user = await this.userService.findUserByRefreshToken({
+        refreshToken,
+      });
 
       if (!user) {
         throw new UnauthorizedException(SysMessages.INVALID_REFRESH_TOKEN);
@@ -151,14 +155,15 @@ export class AuthService {
 
   async signout(userId: string): Promise<void> {
     try {
-      const user = await this.userService.findUserById(userId);
+      const user = await this.userService.findUserById({ id: userId });
       if (!user) {
         this.logger.warn(SysMessages.USER_NOT_FOUND);
         throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
-      const checkNullRefreshToken = await this.userService.findByRefreshToken(
-        user.refresh_token!,
-      );
+      const checkNullRefreshToken =
+        await this.userService.findUserByRefreshToken({
+          refreshToken: user.refresh_token!,
+        });
       if (checkNullRefreshToken === null) {
         this.logger.warn(SysMessages.ALREADY_SIGNED_OUT);
         throw new ConflictException(SysMessages.ALREADY_SIGNED_OUT);

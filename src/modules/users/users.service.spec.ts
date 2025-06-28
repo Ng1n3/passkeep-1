@@ -3,6 +3,7 @@ import {
   BadRequestException,
   ConflictException,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -249,6 +250,174 @@ describe('UsersService', () => {
         code: null,
         email: null,
       });
+    });
+  });
+
+  describe('UserSersive - findUserById', () => {
+    const mockUser: User = {
+      id: '1',
+      username: 'test',
+      email: 'test@test.com',
+      password: 'hashedPassword',
+      is_activated: false,
+      refresh_token: null,
+      last_signout_at: null,
+      created_at: expect.any(Date),
+      updated_at: expect.any(Date),
+    };
+    it('should retun user and log success when user is found', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await userService.findUserById({ id: '1' });
+
+      expect(result).toBe(mockUser);
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
+      expect(logger.log).toHaveBeenCalledWith(SysMessages.FETCH_USERS_SUCCESS);
+    });
+
+    it('should throw NotFoundException and log error if user is not found', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(userService.findUserById({ id: '1' })).rejects.toThrow(
+        new NotFoundException(SysMessages.USER_NOT_FOUND),
+      );
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+          name: 'NotFoundException',
+          email: null,
+          code: null,
+          stack: expect.stringContaining('NotFoundException'),
+          error: 'User not found',
+        }),
+      );
+    });
+
+    it('should throw InternalServerErrorException and log if repository throws an unexpected error', async () => {
+      const dbError = new Error('DB failure') as any;
+      dbError.code = '500';
+
+      (userRepository.findOne as jest.Mock).mockRejectedValue(dbError);
+
+      await expect(userService.findUserById({ id: '123' })).rejects.toThrow(
+        new InternalServerErrorException(SysMessages.FETCH_USER_ERROR),
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.FETCH_USER_ERROR,
+          error: 'DB failure',
+          stack: dbError.stack,
+          name: dbError.name,
+          code: '500',
+          email: null,
+        }),
+      );
+    });
+  });
+
+  describe('UserService - findUserByEmail', () => {
+    const mockUser: User = {
+      id: '1',
+      username: 'test',
+      email: 'test@test.com',
+      password: 'hashedPassword',
+      is_activated: false,
+      refresh_token: null,
+      last_signout_at: null,
+      created_at: expect.any(Date),
+      updated_at: expect.any(Date),
+    };
+    it('should retun user and log success when user is found', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await userService.findUserByEmail({
+        email: 'test@test.com',
+      });
+
+      expect(result).toBe(mockUser);
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { email: 'test@test.com' },
+      });
+      expect(logger.log).toHaveBeenCalledWith(SysMessages.FETCH_USERS_SUCCESS);
+      expect(userRepository.findOne).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw NotFoundException and log error if user is not found', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        userService.findUserByEmail({ email: 'test@test.com' }),
+      ).rejects.toThrow(new NotFoundException(SysMessages.USER_NOT_FOUND));
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { email: 'test@test.com' },
+      });
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+          name: 'NotFoundException',
+          email: null,
+          code: null,
+          stack: expect.stringContaining('NotFoundException'),
+          error: 'User not found',
+        }),
+      );
+    });
+
+    it('should throw InternalServerErrorException and log if repository throws an unexpected error', async () => {
+      const dbError = new Error('DB failure') as any;
+      dbError.code = '500';
+
+      (userRepository.findOne as jest.Mock).mockRejectedValue(dbError);
+
+      await expect(
+        userService.findUserByEmail({ email: '123' }),
+      ).rejects.toThrow(
+        new InternalServerErrorException(SysMessages.FETCH_USER_ERROR),
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.FETCH_USER_ERROR,
+          error: 'DB failure',
+          stack: dbError.stack,
+          name: dbError.name,
+          code: '500',
+          email: null,
+        }),
+      );
+    });
+
+    it('should throw NotFoundException and log error user is not found if empty email is given', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(userService.findUserByEmail({ email: ' ' })).rejects.toThrow(
+        new BadRequestException(SysMessages.USER_NOT_FOUND),
+      );
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { email: ' ' },
+      });
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+          name: 'NotFoundException',
+          email: null,
+          code: null,
+          stack: expect.stringContaining('NotFoundException'),
+          error: 'User not found',
+        }),
+      );
     });
   });
 });
