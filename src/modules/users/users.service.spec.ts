@@ -605,4 +605,81 @@ describe('UsersService', () => {
       );
     });
   });
+
+  describe('UserService - updatedUserRefreshToken', () => {
+    const mockUser = {
+      id: '1',
+      username: 'testuser',
+      email: 'test@test.com',
+      password: 'hashedPassword',
+      is_activated: true,
+      refresh_token: null,
+      last_signout_at: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+
+    const updatedUser = {
+      ...mockUser,
+      refresh_token: 'new-refresh-token',
+    };
+
+    it('should successfully update the user refresh token', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
+      (userRepository.save as jest.Mock).mockResolvedValue(updatedUser);
+
+      const result = await userService.updatedUserRefreshToken(
+        '1',
+        'new-refresh-token',
+      );
+
+      expect(userRepository.findOne as jest.Mock).toHaveBeenCalledWith({
+        where: { id: '1' },
+      });
+      expect(userRepository.save).toHaveBeenCalledWith({
+        ...mockUser,
+        refresh_token: 'new-refresh-token',
+      });
+      expect(logger.log).toHaveBeenCalledWith(
+        SysMessages.TOKEN_UPDATE_SUCCESSFUL,
+      );
+      expect(result).toEqual(updatedUser);
+    });
+
+    it('should throw NotFoundException if user is not found', async () => {
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockRejectedValue(new NotFoundException(SysMessages.USER_NOT_FOUND));
+
+      await expect(
+        userService.updatedUserRefreshToken('1', 'new-refresh-token'),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(userService.findUserById).toHaveBeenCalledWith({ id: '1' });
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+        }),
+      );
+    });
+
+    it('should throw InternalServerErrorException on unexpected error', async () => {
+      (userRepository.findOne as jest.Mock).mockImplementation(() => {
+        throw new Error('Unexpected DB error');
+      });
+
+      await expect(
+        userService.updatedUserRefreshToken('1', 'new-refresh-token'),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+
+          message: SysMessages.FETCH_USER_ERROR,
+          error: 'Unexpected DB error',
+        }),
+      );
+    });
+  });
 });

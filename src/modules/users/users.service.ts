@@ -250,11 +250,24 @@ export class UsersService {
         throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
       await this.userRepository.remove(user);
+      this.logger.log(SysMessages.DELETE_USER_SUCCESS);
     } catch (error: any) {
+      let errMessage = SysMessages.DELETE_USER_ERROR;
+
       if (error instanceof NotFoundException) {
+        errMessage = SysMessages.USER_NOT_FOUND;
         throw error;
       }
-      console.error(SysMessages.DELETE_USER_ERROR, error);
+
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
+
       throw new InternalServerErrorException(SysMessages.DELETE_USER_ERROR);
     }
   }
@@ -269,14 +282,31 @@ export class UsersService {
         throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
 
+      this.logger.log(SysMessages.TOKEN_UPDATE_SUCCESSFUL);
       return this.userRepository.save({
         ...user,
         refresh_token: refreshToken,
       });
     } catch (error: any) {
-      console.error(`Error updating user refreshToken: ${error}`);
+      let errMessage = SysMessages.TOKEN_UPDATE_UNSUCCESSFUL;
+
+      if (error instanceof NotFoundException) {
+        errMessage = SysMessages.USER_NOT_FOUND;
+      }
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
+
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new InternalServerErrorException(
-        'Failed to update user refresh token',
+        SysMessages.TOKEN_UPDATE_UNSUCCESSFUL,
       );
     }
   }
