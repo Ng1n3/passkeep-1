@@ -25,6 +25,7 @@ describe('UsersService', () => {
     const mockUserRepository = {
       findOne: jest.fn(),
       find: jest.fn(),
+      remove: jest.fn(),
       create: jest.fn().mockImplementation((dto: CreateUserDto) => ({
         ...dto,
         is_activated: false,
@@ -675,11 +676,94 @@ describe('UsersService', () => {
 
       expect(logger.error).toHaveBeenCalledWith(
         expect.objectContaining({
-
           message: SysMessages.FETCH_USER_ERROR,
           error: 'Unexpected DB error',
         }),
       );
+    });
+  });
+
+  describe('UserService - deleteUser', () => {
+    const userId = '123';
+    const mockUser: User = {
+      id: userId,
+      username: 'testuser',
+      email: 'test@test.com',
+      password: 'hashedPassword',
+      is_activated: true,
+      refresh_token: 'refreshtoken',
+      last_signout_at: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+
+    it('should delete user successfully', async () => {
+      jest.spyOn(userService, 'findUserById').mockResolvedValue(mockUser);
+      (userRepository.remove as jest.Mock).mockResolvedValue(undefined);
+
+      await userService.deleteUser({ id: userId });
+
+      expect(userService.findUserById).toHaveBeenCalledWith({ id: userId });
+      expect(userRepository.remove).toHaveBeenCalledWith(mockUser);
+      expect(logger.log).toHaveBeenCalledWith(SysMessages.DELETE_USER_SUCCESS);
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockRejectedValue(new NotFoundException(SysMessages.USER_NOT_FOUND));
+
+      await expect(userService.deleteUser({ id: userId })).rejects.toThrow(
+        new NotFoundException(SysMessages.USER_NOT_FOUND),
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+          name: 'NotFoundException',
+        }),
+      );
+    });
+
+    it('should throw InternalServerErrorException on database error', async () => {
+
+      jest.spyOn(userService, 'findUserById').mockResolvedValue(mockUser);
+      (userRepository.remove as jest.Mock).mockRejectedValue(
+        new Error('Database error'),
+      );
+
+      await expect(userService.deleteUser({ id: userId })).rejects.toThrow(
+        new InternalServerErrorException(SysMessages.DELETE_USER_ERROR),
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.DELETE_USER_ERROR,
+          error: 'Database error',
+        }),
+      );
+    });
+
+    it('should log specific error details on failure', async () => {
+      const testError = new Error('Test error');
+      testError.name = 'TestError';
+      testError.stack = 'Test stack trace';
+
+      jest.spyOn(userService, 'findUserById').mockRejectedValue(testError);
+
+      await expect(userService.deleteUser({ id: userId })).rejects.toThrow(
+        InternalServerErrorException,
+      );
+
+      expect(logger.error).toHaveBeenCalledWith({
+        message: SysMessages.DELETE_USER_ERROR,
+        error: 'Test error',
+        stack: 'Test stack trace',
+        name: 'TestError',
+        code: null,
+        email: null,
+      });
     });
   });
 });

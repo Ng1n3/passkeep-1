@@ -253,12 +253,9 @@ export class UsersService {
       this.logger.log(SysMessages.DELETE_USER_SUCCESS);
     } catch (error: any) {
       let errMessage = SysMessages.DELETE_USER_ERROR;
-
       if (error instanceof NotFoundException) {
         errMessage = SysMessages.USER_NOT_FOUND;
-        throw error;
       }
-
       this.logger.error({
         message: errMessage,
         error: error.message,
@@ -267,6 +264,10 @@ export class UsersService {
         code: error.code || null,
         email: null,
       });
+      if (error instanceof NotFoundException) {
+        errMessage = SysMessages.USER_NOT_FOUND;
+        throw error;
+      }
 
       throw new InternalServerErrorException(SysMessages.DELETE_USER_ERROR);
     }
