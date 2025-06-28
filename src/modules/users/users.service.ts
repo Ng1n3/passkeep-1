@@ -70,9 +70,19 @@ export class UsersService {
 
   async findAllUsers(): Promise<User[]> {
     try {
-      return this.userRepository.find();
+      const users = await this.userRepository.find();
+      this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
+
+      return users;
     } catch (error: any) {
-      console.error(SysMessages.FETCH_USER_ERROR, error);
+      this.logger.error({
+        message: SysMessages.FETCH_USER_ERROR,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
       throw new InternalServerErrorException(SysMessages.FETCH_USER_ERROR);
     }
   }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import {
   BadRequestException,
   ConflictException,
@@ -22,6 +23,7 @@ describe('UsersService', () => {
   beforeEach(async () => {
     const mockUserRepository = {
       findOne: jest.fn(),
+      find: jest.fn(),
       create: jest.fn().mockImplementation((dto: CreateUserDto) => ({
         ...dto,
         is_activated: false,
@@ -97,29 +99,26 @@ describe('UsersService', () => {
 
       const result = await userService.createUser(createUserDto);
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(userService.validateUniqueConstraints).toHaveBeenCalledWith(
         'test',
         'test@test.com',
       );
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(userService.confirmPassword).toHaveBeenCalledWith(
         'Master_Pa5$word',
         'Master_Pa5$word',
       );
-      // eslint-disable-next-line @typescript-eslint/unbound-method
+
       expect(passwordConfig.hashPassword).toHaveBeenCalledWith(
         'Master_Pa5$word',
       );
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(userRepository.create).toHaveBeenCalledWith({
         username: createUserDto.username,
         email: createUserDto.email,
         password: 'hashedPassword',
       });
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(userRepository.save).toHaveBeenCalled();
       expect(result).toEqual({
         id: 1,
@@ -186,10 +185,70 @@ describe('UsersService', () => {
 
       await userService.createUser(createUserDto);
 
-      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(logger.log).toHaveBeenCalledWith(
         expect.stringContaining(SysMessages.CREATE_USER_SUCCESS),
       );
+    });
+  });
+
+  describe('Get all users', () => {
+    it('shold return all users successfully and log success', async () => {
+      const mockUsers: User[] = [
+        {
+          id: '1',
+          username: 'test',
+          email: 'test@test.com',
+          password: 'hashedPassword',
+          is_activated: false,
+          refresh_token: null,
+          last_signout_at: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+        {
+          id: '2',
+          username: 'test2',
+          email: 'test2@test.com',
+          password: 'hashedPassword',
+          is_activated: false,
+          refresh_token: null,
+          last_signout_at: null,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
+      ];
+
+      jest.spyOn(userRepository, 'find').mockResolvedValue(mockUsers);
+
+      const result = await userService.findAllUsers();
+
+      expect(userRepository.find).toHaveBeenCalled();
+      expect(logger.log).toHaveBeenCalledWith(
+        expect.stringContaining(SysMessages.FETCH_USERS_SUCCESS),
+      );
+      expect(result).toEqual(mockUsers);
+    });
+
+    it('should throw Internal server error log and also log if find fails', async () => {
+      const mockError = new Error('DB failure');
+
+      jest.spyOn(userRepository, 'find').mockRejectedValue(mockError);
+
+      await expect(userService.findAllUsers()).rejects.toThrow(
+        InternalServerErrorException,
+      );
+      await expect(userService.findAllUsers()).rejects.toThrow(
+        SysMessages.FETCH_USER_ERROR,
+      );
+
+      expect(logger.error).toHaveBeenCalledWith({
+        message: SysMessages.FETCH_USER_ERROR,
+        error: mockError.message,
+        stack: mockError.stack,
+        name: mockError.name,
+        code: null,
+        email: null,
+      });
     });
   });
 });

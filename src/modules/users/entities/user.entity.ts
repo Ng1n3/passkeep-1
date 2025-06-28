@@ -19,5 +19,5 @@ export class User extends AbstractBaseEntity {
   refresh_token: string | null;
 
   @Column({ nullable: true, default: null })
-  last_signout_at: Date;
+  last_signout_at: Date | null;
 }
