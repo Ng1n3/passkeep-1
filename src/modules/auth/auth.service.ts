@@ -8,12 +8,12 @@ import {
 } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { Logger } from 'nestjs-pino';
+import * as SysMessages from '../../shared/constants/systemMessages';
 import {
   AuthCreationResponse,
   AuthLoginResponse,
   RefreshTokenResponse,
-} from 'src/shared/interfaces/auth';
-import * as SysMessages from '../../shared/constants/systemMessages';
+} from '../../shared/interfaces/auth';
 import { JwtPayload, JwtUtils } from '../../utils/jwt.utils';
 import { UsersService } from '../users/users.service';
 import { AuthLoginDto, CreateAuthDto } from './dto/auth.dto';

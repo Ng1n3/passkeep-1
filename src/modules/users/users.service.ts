@@ -8,9 +8,9 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Logger } from 'nestjs-pino';
-import { PasswordConfig } from 'src/utils/user.utils';
 import { Repository } from 'typeorm';
 import * as SysMessages from '../../shared/constants/systemMessages';
+import { PasswordConfig } from '../../utils/user.utils';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -44,18 +44,26 @@ export class UsersService {
       }
 
       const user = this.userRepository.create({
-        ...createUserDto,
+        username: createUserDto.username,
+        email: createUserDto.email,
         password: await this.passwordConfig.hashPassword(
           createUserDto.password,
         ),
       });
 
+      this.logger.log(SysMessages.CREATE_USER_SUCCESS);
+
       return this.userRepository.save(user);
     } catch (error: any) {
-      if (error instanceof ConflictException) {
+      this.logger.error({
+        message: SysMessages.CREATE_USER_ERROR,
+        error: error.message,
+        stack: error.stack,
+        email: createUserDto.email,
+      });
+      if (error instanceof HttpException) {
         throw error;
       }
-      console.error(SysMessages.CREATE_USER_ERROR, error);
       throw new InternalServerErrorException(SysMessages.CREATE_USER_ERROR);
     }
   }
@@ -213,7 +221,7 @@ export class UsersService {
     }
   }
 
-  private async validateUniqueConstraints(
+  async validateUniqueConstraints(
     username: string,
     email: string,
   ): Promise<void> {
@@ -221,18 +229,18 @@ export class UsersService {
       where: { username },
     });
     if (existingUsername) {
-      throw new ConflictException('User with this username already exists');
+      throw new ConflictException(SysMessages.USER_ALREADY_EXISTS);
     }
 
     const existingEmail = await this.userRepository.findOne({
       where: { email },
     });
     if (existingEmail) {
-      throw new ConflictException('User with this email already exists');
+      throw new ConflictException(SysMessages.USER_ALREADY_EXISTS);
     }
   }
 
-  private confirmPassword(password_1: string, password_2: string): boolean {
+  confirmPassword(password_1: string, password_2: string): boolean {
     return password_1 === password_2;
   }
 }

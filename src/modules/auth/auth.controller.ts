@@ -10,11 +10,11 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
-import { SetCookie } from 'src/common/decorators/cookie.decorator';
-import { CurrentUser } from 'src/common/decorators/current-user.decorator';
-import { AuthGuard } from 'src/guards/auth.guard';
-import { CookieInterceptor } from 'src/shared/interceptors/cookie.interceptor';
+import { SetCookie } from '../../common/decorators/cookie.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { AuthGuard } from '../../guards/auth.guard';
 import * as SysMessages from '../../shared/constants/systemMessages';
+import { CookieInterceptor } from '../../shared/interceptors/cookie.interceptor';
 import { JwtPayload } from '../../utils/jwt.utils';
 import { CookieService } from '../cookies/cookies.service';
 import { AuthService } from './auth.service';

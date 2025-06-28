@@ -7,15 +7,13 @@ import * as joi from 'joi';
 import { LoggerModule } from 'nestjs-pino';
 import databaseConfig, { DatabaseConfig } from '../config/database.config';
 import serverConfig from '../config/server.config';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { CookieModule } from './modules/cookies/cookie.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [],
+  providers: [],
   imports: [
     ConfigModule.forRoot({
       envFilePath: ['.env'],

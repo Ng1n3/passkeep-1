@@ -3,7 +3,7 @@ import * as jwt from 'jsonwebtoken';
 import { SignOptions } from 'jsonwebtoken';
 import ms from 'ms';
 import * as path from 'path';
-import { checkEnv } from 'src/shared/helpers/env-check';
+import { checkEnv } from '../shared/helpers/env-check';
 
 export interface JwtPayload {
   id: string;

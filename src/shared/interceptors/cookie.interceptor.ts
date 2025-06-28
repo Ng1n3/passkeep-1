@@ -8,7 +8,7 @@ import { Reflector } from '@nestjs/core';
 import { CookieOptions, Response } from 'express';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { COOKIE_METADATA_KEY } from 'src/common/decorators/cookie.decorator';
+import { COOKIE_METADATA_KEY } from '../../common/decorators/cookie.decorator';
 
 // Define proper types for cookie settings
 interface CookieSettings {

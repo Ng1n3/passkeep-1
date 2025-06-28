@@ -46,6 +46,8 @@ lerna-debug.log*
 .temp
 .tmp
 
+./src/modules/auth/keys/*.pem
+
 # Runtime data
 pids
 *.pid

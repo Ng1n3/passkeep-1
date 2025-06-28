@@ -7,10 +7,10 @@ import {
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
 import { Logger } from 'nestjs-pino';
-import { IS_PUBLIC_KEY } from 'src/common/decorators/public.decorator';
-import { AuthenticatedRequest } from 'src/common/types/express-request.types';
-import { JwtUtils } from 'src/utils/jwt.utils';
+import { IS_PUBLIC_KEY } from '../common/decorators/public.decorator';
+import { AuthenticatedRequest } from '../common/types/express-request.types';
 import * as SysMessages from '../shared/constants/systemMessages';
+import { JwtUtils } from '../utils/jwt.utils';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
