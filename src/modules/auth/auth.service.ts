@@ -116,7 +116,7 @@ export class AuthService {
     try {
       const decoded = JwtUtils.verifyRefreshToken(refreshToken);
       const user = await this.userService.findUserByRefreshToken({
-        refreshToken,
+        refresh_token: refreshToken,
       });
 
       if (!user) {
@@ -162,7 +162,7 @@ export class AuthService {
       }
       const checkNullRefreshToken =
         await this.userService.findUserByRefreshToken({
-          refreshToken: user.refresh_token!,
+          refresh_token: user.refresh_token!,
         });
       if (checkNullRefreshToken === null) {
         this.logger.warn(SysMessages.ALREADY_SIGNED_OUT);

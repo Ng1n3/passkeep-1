@@ -1,3 +1,4 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
   IsEmail,
@@ -25,7 +26,7 @@ export class FindUserDto {
   @IsNotEmpty({ message: 'Refresh token cannot be empty' })
   refresh_token?: string;
 
-  @ValidateIf((o) => !o.id && !o.email && !o.refreshToken)
+  @ValidateIf((o) => !o.id && !o.email && !o.refresh_token)
   @IsNotEmpty({
     message: 'At leaset one fo id, email or refreshTOken must be provided',
   })
@@ -47,7 +48,12 @@ export class FindUserByIdDto {
 }
 
 export class FindUserByRefreshTokenDto {
+  @ApiProperty({
+    description: 'Refresh token to find user',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    required: true,
+  })
   @IsString()
   @IsNotEmpty({ message: 'Refresh token is required' })
-  refreshToken: string;
+  refresh_token: string;
 }

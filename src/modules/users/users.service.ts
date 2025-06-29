@@ -317,19 +317,37 @@ export class UsersService {
   ): Promise<User> {
     try {
       const user = await this.userRepository.findOne({
-        where: { refresh_token: refreshTokenDto.refreshToken },
+        where: { refresh_token: refreshTokenDto.refresh_token },
       });
 
       if (!user) {
         throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
 
+      this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
       return user;
     } catch (error: any) {
-      console.error('Error finding user by refreshToken', error.message);
-      throw new InternalServerErrorException(
-        'Error finding user by refreshToken',
-      );
+      let errMessage = SysMessages.USER_NOT_FOUND;
+      if (error instanceof NotFoundException) {
+        errMessage = SysMessages.USER_NOT_FOUND;
+      } else if (error instanceof BadRequestException) {
+        errMessage = SysMessages.INVALID_SEARCH_CREDENTIALS;
+      } else {
+        errMessage = SysMessages.USER_NOT_FOUND;
+      }
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(SysMessages.USER_NOT_FOUND);
     }
   }
 

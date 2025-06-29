@@ -11,7 +11,12 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { AuthGuard } from '../../guards/auth.guard';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -141,6 +146,10 @@ export class UsersController {
     description: SysMessages.USER_NOT_FOUND,
   })
   @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.INVALID_SEARCH_CREDENTIALS,
+  })
+  @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
@@ -194,6 +203,10 @@ export class UsersController {
     description: SysMessages.USER_NOT_FOUND,
   })
   @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.INVALID_SEARCH_CREDENTIALS,
+  })
+  @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
@@ -204,26 +217,36 @@ export class UsersController {
     return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
   }
 
-  @Get('refresh-token')
+  @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Find user by refresh token',
-    description: 'This endpoint retrieves a user by their refresh token.',
+    description:
+      'This endpoint retrieves a user by their refresh token using POST',
+  })
+  @ApiBody({
+    type: FindUserByRefreshTokenDto,
+    description: 'Refresh token in request body',
   })
   @ApiResponse({
     status: HttpStatus.OK,
     description: SysMessages.FETCH_USERS_SUCCESS,
+    type: UserResponseBody,
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: SysMessages.USER_NOT_FOUND,
   })
   @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.INVALID_SEARCH_CREDENTIALS,
+  })
+  @ApiResponse({
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
   async findUserByRefreshToken(
-    @Query() findUserByRefreshTokenDto: FindUserByRefreshTokenDto,
+    @Body() findUserByRefreshTokenDto: FindUserByRefreshTokenDto,
   ): Promise<UserResponseBody> {
     const user = await this.usersService.findUserByRefreshToken(
       findUserByRefreshTokenDto,

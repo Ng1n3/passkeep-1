@@ -709,7 +709,6 @@ describe('UsersService', () => {
     });
 
     it('should throw NotFoundException if user not found', async () => {
-
       jest
         .spyOn(userService, 'findUserById')
         .mockRejectedValue(new NotFoundException(SysMessages.USER_NOT_FOUND));
@@ -727,7 +726,6 @@ describe('UsersService', () => {
     });
 
     it('should throw InternalServerErrorException on database error', async () => {
-
       jest.spyOn(userService, 'findUserById').mockResolvedValue(mockUser);
       (userRepository.remove as jest.Mock).mockRejectedValue(
         new Error('Database error'),
@@ -764,6 +762,96 @@ describe('UsersService', () => {
         code: null,
         email: null,
       });
+    });
+  });
+
+  describe('UserService - findUserByRefreshToken', () => {
+    const validRefreshToken = 'valid.refresh.token';
+    const invalidRefreshToken = 'invalid.refresh.token';
+    const mockUser = {
+      id: '123',
+      email: 'test@test.com',
+      username: 'testuser',
+      refresh_token: validRefreshToken,
+    };
+
+    it('should return user when valid refresh token is provided', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
+
+      const result = await userService.findUserByRefreshToken({
+        refresh_token: validRefreshToken,
+      });
+
+      expect(userRepository.findOne).toHaveBeenCalledWith({
+        where: { refresh_token: validRefreshToken },
+      });
+      expect(result).toEqual(mockUser);
+      expect(logger.log).toHaveBeenCalledWith(SysMessages.FETCH_USERS_SUCCESS);
+    });
+
+    it('should throw NotFoundException when user is not found', async () => {
+      (userRepository.findOne as jest.Mock).mockResolvedValue(null);
+
+      await expect(
+        userService.findUserByRefreshToken({
+          refresh_token: invalidRefreshToken,
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+          name: 'NotFoundException',
+        }),
+      );
+    });
+
+    it('should throw InternalServerErrorException on database error', async () => {
+      (userRepository.findOne as jest.Mock).mockRejectedValue(
+        new Error('Database connection failed'),
+      );
+
+      await expect(
+        userService.findUserByRefreshToken({
+          refresh_token: validRefreshToken,
+        }),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+          error: 'Database connection failed',
+        }),
+      );
+    });
+
+    it('should log complete error details on failure', async () => {
+      const testError = new Error('Test error');
+      testError.name = 'TestError';
+      testError.stack = 'Test stack trace';
+
+      (userRepository.findOne as jest.Mock).mockRejectedValue(testError);
+
+      await expect(
+        userService.findUserByRefreshToken({
+          refresh_token: validRefreshToken,
+        }),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      expect(logger.error).toHaveBeenCalledWith({
+        message: SysMessages.USER_NOT_FOUND,
+        error: 'Test error',
+        stack: 'Test stack trace',
+        name: 'TestError',
+        code: null,
+        email: null,
+      });
+    });
+
+    it('should handle empty refresh token', async () => {
+      await expect(
+        userService.findUserByRefreshToken({ refresh_token: '' }),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });
