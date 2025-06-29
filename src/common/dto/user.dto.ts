@@ -36,4 +36,18 @@ export class UserDataDto {
     example: '2023-10-25T14:30:00.000Z',
   })
   updatedAt: Date;
+
+  @ApiProperty({
+    description: 'Last signed out timestamp',
+    example: '2023-10-25T14:30:00.000Z',
+    nullable: true,
+  })
+  last_signout_at: Date | null;
+
+  @ApiProperty({
+    description: 'Refresh Token associated with this user',
+    example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+    nullable: true,
+  })
+  refresh_token: string | null;
 }

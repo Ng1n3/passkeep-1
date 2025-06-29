@@ -854,4 +854,151 @@ describe('UsersService', () => {
       ).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('UserService - updateUser', () => {
+    const userId = '123';
+    const mockExistingUser = {
+      id: userId,
+      username: 'oldUsername',
+      email: 'old@test.com',
+      password: 'oldHashedPassword',
+      is_activated: true,
+      refresh_token: 'refreshtoken',
+      last_signout_at: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+    const updateData = {
+      username: 'newUsername',
+      email: 'new@test.com',
+      password: 'newPassword',
+      is_activated: true,
+      refresh_token: 'refreshtoken',
+      last_signout_at: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+
+    // Success Cases
+    it('should update user successfully without password', async () => {
+      const updateWithoutPassword = {
+        username: 'newUsername',
+        refresh_token: 'refreshtoken',
+      };
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockResolvedValue(mockExistingUser);
+      (userRepository.save as jest.Mock).mockImplementation((user) =>
+        Promise.resolve(user),
+      );
+
+      const _ = await userService.updateUser(
+        { id: userId },
+        updateWithoutPassword,
+      );
+
+      expect(userService.findUserById).toHaveBeenCalledWith({ id: userId });
+      expect(passwordConfig.hashPassword).not.toHaveBeenCalled();
+      expect(userRepository.save).toHaveBeenCalledWith({
+        ...mockExistingUser,
+        ...updateWithoutPassword,
+      });
+      expect(logger.log).toHaveBeenCalledWith(SysMessages.UPDATE_USER_SUCCESS);
+    });
+
+    it('should hash password when provided in update', async () => {
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockResolvedValue(mockExistingUser);
+      (passwordConfig.hashPassword as jest.Mock).mockResolvedValue(
+        'newHashedPassword',
+      );
+      (userRepository.save as jest.Mock).mockImplementation((user) =>
+        Promise.resolve(user),
+      );
+
+      const result = await userService.updateUser(
+        { id: userId },
+        {
+          password: 'newPassword',
+        },
+      );
+
+      expect(passwordConfig.hashPassword).toHaveBeenCalledWith('newPassword');
+      expect(result.password).toBe('newHashedPassword');
+    });
+
+    // Error Cases
+    it('should throw NotFoundException if user not found', async () => {
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockRejectedValue(new NotFoundException(SysMessages.USER_NOT_FOUND));
+
+      await expect(
+        userService.updateUser({ id: userId }, updateData),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.USER_NOT_FOUND,
+        }),
+      );
+    });
+
+    it('should handle password hashing errors', async () => {
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockResolvedValue(mockExistingUser);
+      (passwordConfig.hashPassword as jest.Mock).mockRejectedValue(
+        new Error('Hashing failed'),
+      );
+
+      await expect(
+        userService.updateUser({ id: userId }, { password: 'newPassword' }),
+      ).rejects.toThrow(InternalServerErrorException);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.UPDATE_USER_ERROR,
+          error: 'Hashing failed',
+        }),
+      );
+    });
+
+    // Edge Cases
+    it('should handle empty update object', async () => {
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockResolvedValue(mockExistingUser);
+      (userRepository.save as jest.Mock).mockImplementation((user) =>
+        Promise.resolve(user),
+      );
+
+      const result = await userService.updateUser({ id: userId }, {});
+
+      expect(userRepository.save).toHaveBeenCalledWith(mockExistingUser);
+      expect(result).toEqual(mockExistingUser);
+    });
+
+    it('should log complete error details', async () => {
+      const testError = new Error('Test error');
+      testError.name = 'TestError';
+      testError.stack = 'Test stack trace';
+
+      jest.spyOn(userService, 'findUserById').mockRejectedValue(testError);
+
+      await expect(
+        userService.updateUser({ id: userId }, updateData),
+      ).rejects.toThrow();
+
+      expect(logger.error).toHaveBeenCalledWith({
+        message: SysMessages.UPDATE_USER_ERROR,
+        error: 'Test error',
+        stack: 'Test stack trace',
+        name: 'TestError',
+        code: null,
+        email: null,
+      });
+    });
+  });
 });

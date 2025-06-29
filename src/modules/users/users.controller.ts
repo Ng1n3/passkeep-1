@@ -17,6 +17,7 @@ import {
   ApiOperation,
   ApiResponse,
 } from '@nestjs/swagger';
+
 import { AuthGuard } from '../../guards/auth.guard';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -53,6 +54,8 @@ export class UsersController {
         username: user.username,
         email: user.email,
         is_activated: user.is_activated,
+        last_signout_at: user.last_signout_at,
+        refresh_token: user.refresh_token,
         createdAt: user.created_at,
         updatedAt: user.updated_at,
       },
@@ -124,6 +127,8 @@ export class UsersController {
         id: user.id,
         username: user.username,
         email: user.email,
+        last_signout_at: user.last_signout_at,
+        refresh_token: user.refresh_token,
         is_activated: user.is_activated,
         createdAt: user.created_at,
         updatedAt: user.updated_at,

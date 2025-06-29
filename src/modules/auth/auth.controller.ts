@@ -1,15 +1,18 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Req,
   Res,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Response } from 'express';
+import { AuthenticatedRequest } from 'src/common/types/express-request.types';
 import { SetCookie } from '../../common/decorators/cookie.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthGuard } from '../../guards/auth.guard';
@@ -17,6 +20,7 @@ import * as SysMessages from '../../shared/constants/systemMessages';
 import { CookieInterceptor } from '../../shared/interceptors/cookie.interceptor';
 import { JwtPayload } from '../../utils/jwt.utils';
 import { CookieService } from '../cookies/cookies.service';
+import { UserResponseBody } from '../users/dto/user-response.dto';
 import { AuthService } from './auth.service';
 import {
   AuthResponseBody,
@@ -50,6 +54,8 @@ export class AuthController {
           id: user.id,
           email: user.email,
           username: user.username,
+          last_signout_at: user.last_signout_at,
+          refresh_token: user.refresh_token,
           is_activated: user.is_activated,
           createdAt: user.created_at.toISOString(),
           updatedAt: user.updated_at.toISOString(),
@@ -192,6 +198,48 @@ export class AuthController {
         access_token: accessToken,
         refresh_token: refreshToken,
       },
+    };
+  }
+
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get user profile',
+    description: 'Get user from the token',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: SysMessages.FETCH_USERS_SUCCESS,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: SysMessages.USER_NOT_FOUND,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: SysMessages.UNAUTHORIZED,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.INVALID_SEARCH_CREDENTIALS,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async GetMe(@Req() request: AuthenticatedRequest): Promise<UserResponseBody> {
+    const userID = request.user?.id;
+    const user = await this.authService.getCurrentUser({ id: userID });
+
+    return {
+      success: true,
+      statusCode: HttpStatus.OK,
+      message: SysMessages.FETCH_USERS_SUCCESS,
+      timestamp: new Date().toISOString(),
+      path: '/auth/me',
+      data: user,
     };
   }
 

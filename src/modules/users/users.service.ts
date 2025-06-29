@@ -233,12 +233,30 @@ export class UsersService {
         );
       }
 
+      this.logger.log(SysMessages.UPDATE_USER_SUCCESS);
       return this.userRepository.save({ ...user, ...updateUserDto });
     } catch (error: any) {
+      let errMessage = SysMessages.UPDATE_USER_ERROR;
+
       if (error instanceof NotFoundException) {
+        errMessage = SysMessages.USER_NOT_FOUND;
+      } else if (error instanceof BadRequestException) {
+        errMessage = SysMessages.INVALID_SEARCH_CREDENTIALS;
+      } else {
+        errMessage = SysMessages.UPDATE_USER_ERROR;
+      }
+
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
+      if (error instanceof HttpException) {
         throw error;
       }
-      console.error(SysMessages.UPDATE_USER_ERROR, error);
       throw new InternalServerErrorException(SysMessages.UPDATE_USER_ERROR);
     }
   }

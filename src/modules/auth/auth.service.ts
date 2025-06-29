@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -8,6 +9,7 @@ import {
 } from '@nestjs/common';
 import jwt from 'jsonwebtoken';
 import { Logger } from 'nestjs-pino';
+import { UserDataDto } from 'src/common/dto/user.dto';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import {
   AuthCreationResponse,
@@ -15,6 +17,7 @@ import {
   RefreshTokenResponse,
 } from '../../shared/interfaces/auth';
 import { JwtPayload, JwtUtils } from '../../utils/jwt.utils';
+import { FindUserByIdDto } from '../users/dto/find-user.dto';
 import { UsersService } from '../users/users.service';
 import { AuthLoginDto, CreateAuthDto } from './dto/auth.dto';
 
@@ -153,11 +156,52 @@ export class AuthService {
     }
   }
 
+  async getCurrentUser(findUserDto: FindUserByIdDto): Promise<UserDataDto> {
+    try {
+      const user = await this.userService.findUserById({ id: findUserDto.id });
+
+      if (!user) {
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
+      }
+
+      this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
+      return {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        is_activated: user.is_activated,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+        last_signout_at: user.last_signout_at,
+        refresh_token: user.refresh_token,
+      };
+    } catch (error: any) {
+      let errMessage = SysMessages.FETCH_USER_ERROR;
+
+      if (error instanceof NotFoundException) {
+        errMessage = SysMessages.USER_NOT_FOUND;
+      }
+
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(SysMessages.FETCH_USER_ERROR);
+    }
+  }
+
   async signout(userId: string): Promise<void> {
     try {
       const user = await this.userService.findUserById({ id: userId });
       if (!user) {
-        this.logger.warn(SysMessages.USER_NOT_FOUND);
         throw new NotFoundException(SysMessages.USER_NOT_FOUND);
       }
       const checkNullRefreshToken =

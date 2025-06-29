@@ -16,3 +16,5 @@ export class AuthResponseBody extends BaseResponseBody<AuthDataDto> {}
 export class RefreshResponseBody extends BaseResponseBody<TokenDataDto> {}
 
 export class SignoutResponseBody extends BaseResponseBody<null> {}
+
+export class ProfileResponseBody extends BaseResponseBody<UserDataDto> {}
