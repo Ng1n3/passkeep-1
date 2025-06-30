@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
-import jwtConfig from 'config/jwt.config';
-import userConfig from 'config/user.config';
+import jwtConfig from '../config/jwt.config';
+import userConfig from '../config/user.config';
 import * as joi from 'joi';
 import { LoggerModule } from 'nestjs-pino';
 import databaseConfig, { DatabaseConfig } from '../config/database.config';

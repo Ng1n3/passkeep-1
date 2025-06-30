@@ -5,5 +5,15 @@
   "testRegex": ".e2e-spec.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
-  }
+  },
+  "setupFilesAfterEnv": ["./setup.ts"],
+  "testTimeout": 30000,
+  "collectCoverageFrom": [
+    "src/**/*.(t|j)s"
+  ],
+  "coverageDirectory": "../coverage",
+  "coverageReporters": ["text", "lcov", "html"],
+  "verbose": true,
+  "forceExit": true,
+  "detectOpenHandles": true
 }

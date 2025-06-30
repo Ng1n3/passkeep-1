@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres_test
+    env_file:
+      - ./.env.test
+    ports:
+      - '5434:5432'
+    environment:
+      - POSTGRES_USER=${DATABASE_USERNAME}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_DB=${DATABASE_NAME}
+      - POSTGRES_HOST=localhost
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U passkeep_test']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pg_data:
