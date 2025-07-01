@@ -93,4 +93,27 @@ export class TestApp {
       throw error;
     }
   }
+
+  async createTestUser(userData: Partial<User> = {}): Promise<User> {
+    const defaultUser = {
+      email: 'test@example.com',
+      username: 'testuser',
+      password: 'hashedpassword123',
+      is_activated: false,
+      ...userData,
+    };
+
+    const user = this.userRepository.create(defaultUser);
+    return await this.userRepository.save(user);
+  }
+
+  // Helper method to find user by email
+  async findUserByEmail(email: string): Promise<User | null> {
+    return await this.userRepository.findOne({ where: { email } });
+  }
+
+  // Helper method to find user by username
+  async findUserByUsername(username: string): Promise<User | null> {
+    return await this.userRepository.findOne({ where: { username } });
+  }
 }
