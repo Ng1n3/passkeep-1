@@ -15,6 +15,7 @@ import {
   ApiBearerAuth,
   ApiBody,
   ApiOperation,
+  ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
 
@@ -142,6 +143,12 @@ export class UsersController {
     summary: 'Get a user by ID',
     description: 'This endpoint retrieves a user by their unique ID.',
   })
+  @ApiParam({
+    name: 'id',
+    type: String,
+    format: 'uuid',
+    example: '3fa85f64-5717-4562-b3fc-2c963f66afa6',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: SysMessages.FETCH_USERS_SUCCESS,
@@ -158,10 +165,8 @@ export class UsersController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
-  async findOne(
-    @Param('id') findUserDto: FindUserByIdDto,
-  ): Promise<UserResponseBody> {
-    const user = await this.usersService.findUserById(findUserDto);
+  async findOne(@Param('id') id: string): Promise<UserResponseBody> {
+    const user = await this.usersService.findUserById({ id });
     return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
   }
 

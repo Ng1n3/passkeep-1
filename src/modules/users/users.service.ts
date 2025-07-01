@@ -177,7 +177,7 @@ export class UsersService {
         code: error.code || null,
         email: null,
       });
-      if (error instanceof NotFoundException) {
+      if (error instanceof HttpException) {
         throw error;
       }
       throw new InternalServerErrorException(SysMessages.FETCH_USER_ERROR);
@@ -379,7 +379,7 @@ export class UsersService {
 
       await this.userRepository.update(userId, {
         refresh_token: null,
-        last_signout_at: new Date(),
+        last_signout_at: new Date().toISOString(),
       });
 
       this.logger.log(SysMessages.TOKEN_CLEAR_SUCCESSFUL);

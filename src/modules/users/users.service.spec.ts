@@ -555,7 +555,9 @@ describe('UsersService', () => {
       });
       expect(userRepository.update).toHaveBeenCalledWith(userId, {
         refresh_token: null,
-        last_signout_at: expect.any(Date),
+        last_signout_at: expect.stringMatching(
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+        ),
       });
       expect(logger.log).toHaveBeenCalledWith(
         SysMessages.TOKEN_CLEAR_SUCCESSFUL,

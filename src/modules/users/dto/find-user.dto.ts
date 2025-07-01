@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   ValidateIf,
 } from 'class-validator';
 
@@ -41,7 +42,7 @@ export class FindUserByEmailDto {
 }
 
 export class FindUserByIdDto {
-  @IsString()
+  @IsUUID('4', { message: 'ID must be a valid UUID' })
   @IsNotEmpty({ message: 'ID is required' })
   @Transform(({ value }: { value: string }) => value?.trim())
   id: string;
