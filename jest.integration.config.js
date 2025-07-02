@@ -3,9 +3,6 @@ module.exports = {
   testEnvironment: 'node',
   rootDir: './',
   testMatch: [
-    // './test/integration/**/*.spec.ts',
-    // './test/integration/**/*.test.ts',
-    // './test/integration/**/*.integration.spec.ts',
     '**/test/integration/**/*.(spec|test).ts',
   ],
   collectCoverageFrom: [

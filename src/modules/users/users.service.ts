@@ -165,10 +165,14 @@ export class UsersService {
       this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
       return user;
     } catch (error: any) {
-      const errMessage =
-        error instanceof NotFoundException
-          ? SysMessages.USER_NOT_FOUND
-          : SysMessages.FETCH_USER_ERROR;
+      let errMessage: string;
+      if (error instanceof NotFoundException) {
+        errMessage = SysMessages.USER_NOT_FOUND;
+      } else if (error instanceof BadRequestException) {
+        errMessage = SysMessages.INVALID_SEARCH_CREDENTIALS;
+      } else {
+        errMessage = SysMessages.FETCH_USER_ERROR;
+      }
       this.logger.error({
         message: errMessage,
         error: error.message,

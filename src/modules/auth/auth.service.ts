@@ -41,8 +41,6 @@ export class AuthService {
 
       const { accessToken, refreshToken } = JwtUtils.generateTokenPair(payload);
 
-      console.log('refresh token: ', refreshToken);
-
       await this.userService.updatedUserRefreshToken(user.id, refreshToken);
 
       this.logger.log(SysMessages.SIGNUP_SUCCESSFUL);
@@ -111,7 +109,9 @@ export class AuthService {
     }
   }
 
-  async refreshToken(refreshToken: string): Promise<RefreshTokenResponse> {
+  async refreshToken(
+    refreshToken: string | undefined,
+  ): Promise<RefreshTokenResponse> {
     if (!refreshToken) {
       throw new BadRequestException(SysMessages.REFRESH_TOKEN_NOT_FOUND);
     }

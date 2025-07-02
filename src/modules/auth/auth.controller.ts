@@ -11,9 +11,8 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthenticatedRequest } from 'src/common/types/express-request.types';
-import { SetCookie } from '../../common/decorators/cookie.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AuthGuard } from '../../guards/auth.guard';
 import * as SysMessages from '../../shared/constants/systemMessages';
@@ -69,9 +68,8 @@ export class AuthController {
   }
 
   @Post('register')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(CookieInterceptor)
-  @SetCookie('refresh_token', { maxAge: 7 * 24 * 60 * 60 * 1000 })
   @ApiOperation({
     summary: 'Sign up an account',
     description: 'This endpoint allows you to create a new user in the system',
@@ -160,7 +158,6 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(AuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Refresh access token',
@@ -183,9 +180,10 @@ export class AuthController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
-  async refreshToken(
-    @Body('refresh_token') refreshToken: string,
-  ): Promise<RefreshResponseBody> {
+  async refreshToken(@Req() req: Request): Promise<RefreshResponseBody> {
+    console.log('Entering refreshToken 🔒 ');
+    const refreshToken: string = req.cookies['refresh_token'];
+    console.log('refresh token: ', refreshToken);
     const { accessToken } = await this.authService.refreshToken(refreshToken);
 
     return {

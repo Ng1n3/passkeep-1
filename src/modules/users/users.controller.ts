@@ -8,7 +8,6 @@ import {
   Param,
   Post,
   Put,
-  Query,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -18,7 +17,6 @@ import {
   ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
-
 import { AuthGuard } from '../../guards/auth.guard';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -65,6 +63,7 @@ export class UsersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Create a new user',
     description: 'This endpoint allows you to create a new user in the system.',
@@ -139,6 +138,8 @@ export class UsersController {
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Get a user by ID',
     description: 'This endpoint retrieves a user by their unique ID.',
@@ -165,13 +166,15 @@ export class UsersController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
-  async findOne(@Param('id') id: string): Promise<UserResponseBody> {
-    const user = await this.usersService.findUserById({ id });
+  async findOne(@Param() param: FindUserByIdDto): Promise<UserResponseBody> {
+    const user = await this.usersService.findUserById(param);
     return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
   }
 
   @Post('find')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Find a user by ID, email, or refresh token',
     description:
@@ -198,8 +201,10 @@ export class UsersController {
     return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
   }
 
-  @Get('email')
+  @Post('email')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Find user by email',
     description: 'This endpoint retrieves a user by their email address.',
@@ -221,7 +226,7 @@ export class UsersController {
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
   async findUserByEmail(
-    @Query() findUserByEmailDto: FindUserByEmailDto,
+    @Body() findUserByEmailDto: FindUserByEmailDto,
   ): Promise<UserResponseBody> {
     const user = await this.usersService.findUserByEmail(findUserByEmailDto);
     return this.formatResponse(user, SysMessages.FETCH_USERS_SUCCESS);
@@ -229,6 +234,8 @@ export class UsersController {
 
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(AuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Find user by refresh token',
     description:
@@ -290,7 +297,7 @@ export class UsersController {
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
   async update(
-    @Param('id') id: FindUserByIdDto,
+    @Param() id: FindUserByIdDto,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserResponseBody> {
     const user = await this.usersService.updateUser(id, updateUserDto);
@@ -318,7 +325,7 @@ export class UsersController {
     status: HttpStatus.INTERNAL_SERVER_ERROR,
     description: SysMessages.INTERNAL_SERVER_ERROR,
   })
-  async remove(@Param('id') id: FindUserByIdDto): Promise<void> {
+  async remove(@Param() id: FindUserByIdDto): Promise<void> {
     await this.usersService.deleteUser(id);
   }
 }
