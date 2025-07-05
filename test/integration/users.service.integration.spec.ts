@@ -1,4 +1,3 @@
-// test/integration/users.service.integration.spec.ts
 import {
   BadRequestException,
   ConflictException,
@@ -34,6 +33,7 @@ describe('UsersService Integration Tests', () => {
         username: 'newuser',
         password: 'password123',
         password_confirm: 'password123',
+        passwords: [],
       };
 
       const createdUser = await usersService.createUser(createUserDto);
@@ -63,6 +63,7 @@ describe('UsersService Integration Tests', () => {
         username: 'existinguser', // Same username
         password: 'password123',
         password_confirm: 'password123',
+        passwords: [],
       };
 
       await expect(usersService.createUser(createUserDto)).rejects.toThrow(
@@ -86,6 +87,7 @@ describe('UsersService Integration Tests', () => {
         username: 'differentuser',
         password: 'password123',
         password_confirm: 'password123',
+        passwords: [],
       };
 
       await expect(usersService.createUser(createUserDto)).rejects.toThrow(
@@ -103,6 +105,7 @@ describe('UsersService Integration Tests', () => {
         username: 'testuser',
         password: 'password123',
         password_confirm: 'differentpassword',
+        passwords: [],
       };
 
       await expect(usersService.createUser(createUserDto)).rejects.toThrow(
@@ -120,6 +123,7 @@ describe('UsersService Integration Tests', () => {
         username: 'testuser',
         password: 'plainpassword',
         password_confirm: 'plainpassword',
+        passwords: [],
       };
 
       const createdUser = await usersService.createUser(createUserDto);
@@ -172,6 +176,7 @@ describe('UsersService Integration Tests', () => {
         username: 'persistuser',
         password: 'password123',
         password_confirm: 'password123',
+        passwords: [],
       };
 
       const createdUser = await usersService.createUser(createUserDto);
@@ -194,6 +199,7 @@ describe('UsersService Integration Tests', () => {
         username: 'concurrent1',
         password: 'password123',
         password_confirm: 'password123',
+        passwords: [],
       };
 
       const createUserDto2: CreateUserDto = {
@@ -201,6 +207,7 @@ describe('UsersService Integration Tests', () => {
         username: 'concurrent2',
         password: 'password123',
         password_confirm: 'password123',
+        passwords: [],
       };
 
       // Create users concurrently
@@ -232,6 +239,7 @@ describe('UsersService Integration Tests', () => {
         username: 'newuser',
         password: 'password123',
         password_confirm: 'password123',
+        passwords: [],
       };
 
       await expect(usersService.createUser(invalidDto)).rejects.toThrow(
@@ -604,10 +612,17 @@ describe('UsersService Integration Tests', () => {
       expect(updatedUser).toBeDefined();
       expect(updatedUser?.refresh_token).toBeNull();
       expect(updatedUser?.last_signout_at).toBeDefined();
-      expect(typeof updatedUser?.last_signout_at).toBe('string');
+
       expect(
-        () => new Date(updatedUser?.last_signout_at as Date),
-      ).not.toThrow();
+        updatedUser?.last_signout_at instanceof Date ||
+          typeof updatedUser?.last_signout_at === 'string',
+      ).toBeTruthy();
+
+      const signoutDate = new Date(
+        updatedUser?.last_signout_at as string | Date,
+      );
+      expect(signoutDate instanceof Date).toBeTruthy();
+      expect(isNaN(signoutDate.getTime())).toBeFalsy();
     });
 
     it('should throw NotFoundException for non-existent user', async () => {
@@ -784,7 +799,6 @@ describe('UsersService Integration Tests', () => {
       const userIdDto = { id: testUser.id };
       const updateUserDto = {
         username: 'updatedusername',
-        email: 'updated@test.com',
         is_activated: true,
       };
 
@@ -793,9 +807,10 @@ describe('UsersService Integration Tests', () => {
         updateUserDto,
       );
 
+      console.log('updated User', updatedUser);
+
       expect(updatedUser).toBeDefined();
       expect(updatedUser.username).toBe(updateUserDto.username);
-      expect(updatedUser.email).toBe(updateUserDto.email);
       expect(updatedUser.is_activated).toBe(updateUserDto.is_activated);
       expect(updatedUser.id).toBe(testUser.id);
 
@@ -805,8 +820,24 @@ describe('UsersService Integration Tests', () => {
       });
 
       expect(dbUser?.username).toBe(updateUserDto.username);
-      expect(dbUser?.email).toBe(updateUserDto.email);
       expect(dbUser?.is_activated).toBe(updateUserDto.is_activated);
+    });
+
+    it('should throw ConflictException when trying to update email', async () => {
+      const userIdDto = { id: testUser.id };
+      const updateUserDto = {
+        email: 'newemail@test.com',
+      };
+
+      await expect(
+        usersService.updateUser(userIdDto, updateUserDto),
+      ).rejects.toThrow(ConflictException);
+
+      // Verify email wasn't changed
+      const dbUser = await testApp.userRepository.findOne({
+        where: { id: testUser.id },
+      });
+      expect(dbUser?.email).toBe(testUser.email);
     });
 
     it('should hash password when updating password', async () => {
@@ -886,7 +917,6 @@ describe('UsersService Integration Tests', () => {
       const userIdDto = { id: testUser.id };
       const updateUserDto = {
         username: 'multipleupdateuser',
-        email: 'multipleupdate@test.com',
         password: 'newpassword123',
         is_activated: true,
         refresh_token: 'new-token-789',
@@ -898,7 +928,6 @@ describe('UsersService Integration Tests', () => {
       );
 
       expect(updatedUser.username).toBe(updateUserDto.username);
-      expect(updatedUser.email).toBe(updateUserDto.email);
       expect(updatedUser.is_activated).toBe(updateUserDto.is_activated);
       expect(updatedUser.refresh_token).toBe(updateUserDto.refresh_token);
       expect(updatedUser.password).not.toBe('newpassword123'); // Should be hashed

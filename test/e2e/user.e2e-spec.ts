@@ -56,6 +56,7 @@ describe('User E2E', () => {
     email: 'test@test.com',
     password: 'SecurePass123!',
     password_confirm: 'SecurePass123!',
+    passwords: [],
   };
 
   // Helper function to make authenticated requests
@@ -257,7 +258,10 @@ describe('User E2E', () => {
   describe('PATCH /users/:id', () => {
     const updateData: UpdateUserDto = {
       username: 'updatedusername',
-      email: 'updated@test.com',
+    };
+
+    const updateEmailData: UpdateUserDto = {
+      email: 'test2@test2.com',
     };
 
     it('should update user successfully', async () => {
@@ -269,7 +273,17 @@ describe('User E2E', () => {
         .expect(200);
 
       expect(response.body.data.username).toBe(updateData.username);
-      expect(response.body.data.email).toBe(updateData.email);
+    });
+
+    it('should fail to update email', async () => {
+      const response = await authenticatedRequest(
+        'put',
+        `/users/${createdUser.id}`,
+      )
+        .send(updateEmailData)
+        .expect(409);
+
+      expect(response.body.message).toBe('Email cannot be updated once set.');
     });
 
     it('should hash password when updating password', async () => {

@@ -6,6 +6,9 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
+  MaxLength,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
 
@@ -57,4 +60,15 @@ export class FindUserByRefreshTokenDto {
   @IsString()
   @IsNotEmpty({ message: 'Refresh token is required' })
   refresh_token: string;
+}
+
+export class FindUserByUsernameDto {
+  @IsString()
+  @MinLength(3, { message: 'Username must be at least 3 characters' })
+  @MaxLength(20, { message: 'Username must have a maximum of 20 characters' })
+  @Matches(/^[a-zA-Z0-9_-]+$/, {
+    message:
+      'Username can only contain letters, numbers, underscores, and hyphens',
+  })
+  username: string;
 }

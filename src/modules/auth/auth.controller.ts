@@ -27,12 +27,14 @@ import {
   SignoutResponseBody,
 } from './dto/auth-response.dto';
 import { AuthLoginDto, CreateAuthDto } from './dto/auth.dto';
+import { GoogleOAuthService } from './google-auth.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly cookieService: CookieService,
+    private readonly googleOAuthService: GoogleOAuthService,
   ) {}
 
   private formatResponse(
@@ -107,6 +109,71 @@ export class AuthController {
       'register',
       { accessToken, refreshToken },
     );
+  }
+
+  @Post('google/callback')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Handle Google OAuth callback',
+    description:
+      'Exchanges Google auth code for tokens and signs in or registers user',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Google authentication successful',
+    type: AuthResponseBody,
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: SysMessages.AUTH_CODE_REQUIRED,
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.INTERNAL_SERVER_ERROR,
+  })
+  async googleCallback(
+    @Body('code') code: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseBody> {
+    const { user, accessToken, refreshToken } =
+      await this.authService.handleGoogleCallBack(code);
+
+    if (refreshToken) {
+      this.cookieService.setRefreshTokenCookie(res, refreshToken);
+    }
+
+    return this.formatResponse(
+      user,
+      'Google authentication successful',
+      HttpStatus.OK,
+      'google/callback',
+      { accessToken, refreshToken: refreshToken || undefined },
+    );
+  }
+
+  @Get('google/url')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Get Google OAuth URL',
+    description: 'Generates the Google OAuth URL for client redirection',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Google OAuth URL generated successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.INTERNAL_SERVER_ERROR,
+    description: SysMessages.GOOGLE_AUTH_URL_ERROR,
+  })
+  getGoogleAuthUrl(): { url: string } {
+    const url = this.googleOAuthService.getAuthURL();
+    return { url };
   }
 
   @Post('login')

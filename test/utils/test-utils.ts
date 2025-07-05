@@ -26,15 +26,7 @@ export class TestApp {
 
     // Create the test module with the initialized DataSource
     this.module = await Test.createTestingModule({
-      imports: [
-        // TypeOrmModule.forRoot({
-        //   ...testDatabaseConfig,
-        //   // Use the same connection for the module
-        //   synchronize: true,
-        //   dropSchema: true,
-        // }),
-        AppModule,
-      ],
+      imports: [AppModule],
     })
       .overrideProvider(DataSource)
       .useValue(this.dataSource)
@@ -81,7 +73,7 @@ export class TestApp {
     const entities = this.dataSource.entityMetadatas;
     const tableNames = entities
       .map((entity) => `"${entity.tableName}"`)
-      .join(' ');
+      .join(', ');
 
     try {
       await this.dataSource.query(

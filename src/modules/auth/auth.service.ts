@@ -18,14 +18,18 @@ import {
 } from '../../shared/interfaces/auth';
 import { JwtPayload, JwtUtils } from '../../utils/jwt.utils';
 import { FindUserByIdDto } from '../users/dto/find-user.dto';
+import { User } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
+
 import { AuthLoginDto, CreateAuthDto } from './dto/auth.dto';
+import { GoogleOAuthService } from './google-auth.service';
 
 @Injectable()
 export class AuthService {
   private readonly logger: Logger;
   constructor(
     private readonly userService: UsersService,
+    private googleOAuthService: GoogleOAuthService,
     logger: Logger,
   ) {
     this.logger = logger;
@@ -33,7 +37,10 @@ export class AuthService {
 
   async create(createAuthDto: CreateAuthDto): Promise<AuthCreationResponse> {
     try {
-      const user = await this.userService.createUser(createAuthDto);
+      const user = await this.userService.createUser({
+        ...createAuthDto,
+        passwords: [],
+      });
       const payload: JwtPayload = {
         id: user.id.toString(),
         email: user.email,
@@ -125,7 +132,6 @@ export class AuthService {
       if (!user) {
         throw new UnauthorizedException(SysMessages.INVALID_REFRESH_TOKEN);
       }
-
       if (decoded.id !== user.id.toString()) {
         throw new UnauthorizedException(SysMessages.INVALID_REFRESH_TOKEN);
       }
@@ -225,5 +231,80 @@ export class AuthService {
 
       throw new InternalServerErrorException(SysMessages.SIGN_OUT_ERROR);
     }
+  }
+
+  async handleGoogleCallBack(code: string) {
+    if (!code) {
+      throw new BadRequestException(SysMessages.AUTH_CODE_REQUIRED);
+    }
+
+    const tokenResponse =
+      await this.googleOAuthService.exchangeCodeForTokens(code);
+
+    const googleUser = await this.googleOAuthService.getUserInfo(
+      tokenResponse.access_token,
+    );
+
+    console.log('google user: ', googleUser);
+
+    if (!googleUser.verified_email) {
+      throw new BadRequestException(SysMessages.GOOGLE_EMAIL_NOT_VERIFIED);
+    }
+
+    let user = await this.userService.findUserByEmailOrNull({
+      email: googleUser.email,
+    });
+
+    console.log('After searching for user by email');
+
+    if (!user) {
+      const baseUsername = `${googleUser.given_name}${googleUser.family_name}`
+        .replace(/[^a-zA-Z0-9_-]/g, '')
+        .toLowerCase()
+        .slice(0, 15);
+
+      let username = baseUsername;
+      let exists = await this.userService.findUserByUsernameOrNull({
+        username,
+      });
+
+      while (exists) {
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        username = `${baseUsername}_${randomSuffix}`;
+        exists = await this.userService.findUserByUsernameOrNull({ username });
+      }
+
+      user = await this.userService.createGoogleUser({
+        email: googleUser.email,
+        username,
+        googleId: googleUser.id,
+        picture: googleUser.picture,
+        provider: 'google',
+      });
+    }
+
+    const payload: JwtPayload = {
+      id: user.id.toString(),
+      email: user.email,
+    };
+
+    const { accessToken, refreshToken } = JwtUtils.generateTokenPair(payload);
+
+    await this.userService.updatedUserRefreshToken(user.id, refreshToken);
+
+    return { user, accessToken, refreshToken };
+  }
+
+  private mapToUserDataDto(user: User): UserDataDto {
+    return {
+      id: user.id.toString(),
+      username: user.username,
+      email: user.email,
+      is_activated: user.is_activated,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+      last_signout_at: user.last_signout_at,
+      refresh_token: user.refresh_token,
+    };
   }
 }

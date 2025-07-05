@@ -11,11 +11,13 @@ import { Logger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import { PasswordConfig } from '../../utils/user.utils';
+import { CreateGoogleUserDto } from './dto/create-google-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import {
   FindUserByEmailDto,
   FindUserByIdDto,
   FindUserByRefreshTokenDto,
+  FindUserByUsernameDto,
   FindUserDto,
 } from './dto/find-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -72,6 +74,40 @@ export class UsersService {
       if (error instanceof HttpException) {
         throw error;
       }
+      throw new InternalServerErrorException(SysMessages.CREATE_USER_ERROR);
+    }
+  }
+
+  async createGoogleUser(
+    createGoogleUserDto: CreateGoogleUserDto,
+  ): Promise<User> {
+    try {
+      await this.validateUniqueConstraints(
+        createGoogleUserDto.username,
+        createGoogleUserDto.email,
+      );
+
+      const user = this.userRepository.create({
+        username: createGoogleUserDto.username,
+        email: createGoogleUserDto.email,
+        password: null, // No password for Google users
+      });
+
+      this.logger.log(SysMessages.CREATE_USER_SUCCESS);
+
+      return this.userRepository.save(user);
+    } catch (error: any) {
+      this.logger.error({
+        message: SysMessages.CREATE_USER_ERROR,
+        error: error.message,
+        stack: error.stack,
+        email: createGoogleUserDto.email,
+      });
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
       throw new InternalServerErrorException(SysMessages.CREATE_USER_ERROR);
     }
   }
@@ -220,6 +256,50 @@ export class UsersService {
     }
   }
 
+  async findUserByEmailOrNull(email: FindUserByEmailDto): Promise<User | null> {
+    return this.userRepository.findOne({ where: { email: email.email } });
+  }
+
+  async findUserByUsernameOrNull(
+    username: FindUserByUsernameDto,
+  ): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { username: username.username },
+    });
+  }
+
+  async findUserByUsername(username: FindUserByUsernameDto): Promise<User> {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { email: username.username },
+      });
+      if (!user) {
+        throw new NotFoundException(SysMessages.USER_NOT_FOUND);
+      }
+
+      this.logger.log(SysMessages.FETCH_USERS_SUCCESS);
+      return user;
+    } catch (error: any) {
+      const errMessage =
+        error instanceof NotFoundException
+          ? SysMessages.USER_NOT_FOUND
+          : SysMessages.FETCH_USER_ERROR;
+
+      this.logger.error({
+        message: errMessage,
+        error: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code || null,
+        email: null,
+      });
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(SysMessages.FETCH_USER_ERROR);
+    }
+  }
+
   async updateUser(
     userID: FindUserByIdDto,
     updateUserDto: UpdateUserDto,
@@ -229,6 +309,20 @@ export class UsersService {
 
       if (!user) {
         throw new NotFoundException(SysMessages.USER_NOT_FOUND);
+      }
+
+      if (updateUserDto.username) {
+        const checkUserName = await this.findUserByUsernameOrNull({
+          username: updateUserDto.username,
+        });
+
+        if (checkUserName) {
+          throw new ConflictException(SysMessages.USERNAME_TAKEN);
+        }
+      }
+
+      if (updateUserDto.email) {
+        throw new ConflictException(SysMessages.CANNOT_UPDATE_EMAIL);
       }
 
       if (updateUserDto.password) {

@@ -11,6 +11,7 @@ import { Logger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 import * as SysMessages from '../../shared/constants/systemMessages';
 import { PasswordConfig } from '../../utils/user.utils';
+import { Password } from '../password/entities/password.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
@@ -19,6 +20,7 @@ describe('UsersService', () => {
   let userService: UsersService;
   let userRepository: Repository<User>;
   let passwordConfig: PasswordConfig;
+  let _passwordRepository: Repository<Password>;
   let logger: Logger;
 
   beforeEach(async () => {
@@ -34,13 +36,22 @@ describe('UsersService', () => {
       })),
       save: jest.fn().mockImplementation((user) =>
         Promise.resolve({
-          id: 1,
+          id: '6cbd23fb-0957-476e-9d51-2f9ffae5ca7d',
           ...user,
           created_at: new Date(),
           updated_at: new Date(),
         }),
       ),
-      update: jest.fn(), // Add this line to mock the update method
+      update: jest.fn(),
+    };
+
+    const mockPasswordRepository = {
+      findOne: jest.fn(),
+      find: jest.fn(),
+      create: jest.fn(),
+      save: jest.fn(),
+      delete: jest.fn(),
+      remove: jest.fn(),
     };
 
     const mockPasswordConfig = {
@@ -67,6 +78,10 @@ describe('UsersService', () => {
           useValue: mockPasswordConfig,
         },
         {
+          provide: getRepositoryToken(Password),
+          useValue: mockPasswordRepository,
+        },
+        {
           provide: Logger,
           useValue: mockLogger,
         },
@@ -76,6 +91,9 @@ describe('UsersService', () => {
     userService = module.get<UsersService>(UsersService);
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
     passwordConfig = module.get<PasswordConfig>(PasswordConfig);
+    _passwordRepository = module.get<Repository<Password>>(
+      getRepositoryToken(Password),
+    );
     logger = module.get<Logger>(Logger);
   });
 
@@ -89,6 +107,7 @@ describe('UsersService', () => {
       username: 'test',
       password: 'Master_Pa5$word',
       password_confirm: 'Master_Pa5$word',
+      passwords: [],
     };
 
     it('should create and return a user successfully', async () => {
@@ -124,7 +143,7 @@ describe('UsersService', () => {
 
       expect(userRepository.save).toHaveBeenCalled();
       expect(result).toEqual({
-        id: 1,
+        id: '6cbd23fb-0957-476e-9d51-2f9ffae5ca7d',
         username: 'test',
         email: 'test@test.com',
         password: 'hashedPassword',
@@ -198,27 +217,39 @@ describe('UsersService', () => {
     it('shold return all users successfully and log success', async () => {
       const mockUsers: User[] = [
         {
-          id: '1',
+          id: '2b66e3f8-124b-4d49-811d-6f419a973e05',
           username: 'test',
           email: 'test@test.com',
           password: 'hashedPassword',
           is_activated: false,
-          refresh_token: null,
+          refresh_token:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
           last_signout_at: null,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
+          created_at: expect.any(Date),
+          updated_at: expect.any(Date),
+          passwords: [],
+          provider: 'local',
+          _originalEmail: 'test@test.com',
+          checkEmailImmutable: jest.fn(),
+          loadOriginalEmail: jest.fn(),
+        } as unknown as User,
         {
-          id: '2',
-          username: 'test2',
-          email: 'test2@test.com',
+          id: '6cbd23fb-0957-476e-9d51-2f9ffae5ca7d',
+          username: 'test',
+          email: 'test@test.com',
           password: 'hashedPassword',
           is_activated: false,
-          refresh_token: null,
+          refresh_token:
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
           last_signout_at: null,
-          created_at: new Date(),
-          updated_at: new Date(),
-        },
+          created_at: expect.any(Date),
+          updated_at: expect.any(Date),
+          passwords: [],
+          provider: 'local',
+          _originalEmail: 'test@test.com',
+          checkEmailImmutable: jest.fn(),
+          loadOriginalEmail: jest.fn(),
+        } as unknown as User,
       ];
 
       jest.spyOn(userRepository, 'find').mockResolvedValue(mockUsers);
@@ -256,8 +287,8 @@ describe('UsersService', () => {
   });
 
   describe('UserSersive - findUserById', () => {
-    const mockUser: User = {
-      id: '1',
+    const mockUser = {
+      id: '2b66e3f8-124b-4d49-811d-6f419a973e05',
       username: 'test',
       email: 'test@test.com',
       password: 'hashedPassword',
@@ -266,7 +297,13 @@ describe('UsersService', () => {
       last_signout_at: null,
       created_at: expect.any(Date),
       updated_at: expect.any(Date),
-    };
+      passwords: [],
+      provider: 'local',
+      _originalEmail: 'test@test.com',
+      checkEmailImmutable: jest.fn(),
+      loadOriginalEmail: jest.fn(),
+    } as unknown as User;
+
     it('should retun user and log success when user is found', async () => {
       (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
 
@@ -326,8 +363,8 @@ describe('UsersService', () => {
   });
 
   describe('UserService - findUserByEmail', () => {
-    const mockUser: User = {
-      id: '1',
+    const mockUser = {
+      id: '2b66e3f8-124b-4d49-811d-6f419a973e05',
       username: 'test',
       email: 'test@test.com',
       password: 'hashedPassword',
@@ -336,7 +373,13 @@ describe('UsersService', () => {
       last_signout_at: null,
       created_at: expect.any(Date),
       updated_at: expect.any(Date),
-    };
+      passwords: [],
+      provider: 'local',
+      _originalEmail: 'test@test.com',
+      checkEmailImmutable: jest.fn(),
+      loadOriginalEmail: jest.fn(),
+    } as unknown as User;
+
     it('should retun user and log success when user is found', async () => {
       (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
 
@@ -424,8 +467,8 @@ describe('UsersService', () => {
   });
 
   describe('UserService - findUser', () => {
-    const mockUser: User = {
-      id: '1',
+    const mockUser = {
+      id: '2b66e3f8-124b-4d49-811d-6f419a973e05',
       username: 'test',
       email: 'test@test.com',
       password: 'hashedPassword',
@@ -435,7 +478,13 @@ describe('UsersService', () => {
       last_signout_at: null,
       created_at: expect.any(Date),
       updated_at: expect.any(Date),
-    };
+      passwords: [],
+      provider: 'local',
+      _originalEmail: 'test@test.com',
+      checkEmailImmutable: jest.fn(),
+      loadOriginalEmail: jest.fn(),
+    } as unknown as User;
+
     it('Should return user when found by id', async () => {
       (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
 
@@ -531,18 +580,24 @@ describe('UsersService', () => {
   });
 
   describe('UserService - clearRefreshToken', () => {
-    const userId = '1';
-    const mockUser: User = {
+    const userId = '2b66e3f8-124b-4d49-811d-6f419a973e05';
+    const mockUser = {
       id: userId,
       username: 'test',
       email: 'test@test.com',
       password: 'hashedPassword',
-      is_activated: true,
-      refresh_token: 'some-refresh-token',
+      is_activated: false,
+      refresh_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
       last_signout_at: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
+      created_at: expect.any(Date),
+      updated_at: expect.any(Date),
+      passwords: [],
+      provider: 'local',
+      _originalEmail: 'test@test.com',
+      checkEmailImmutable: jest.fn(),
+      loadOriginalEmail: jest.fn(),
+    } as unknown as User;
 
     it('should clear refresh token successfully', async () => {
       (userRepository.findOne as jest.Mock).mockResolvedValue(mockUser);
@@ -611,16 +666,22 @@ describe('UsersService', () => {
 
   describe('UserService - updatedUserRefreshToken', () => {
     const mockUser = {
-      id: '1',
-      username: 'testuser',
+      id: '2b66e3f8-124b-4d49-811d-6f419a973e05',
+      username: 'test',
       email: 'test@test.com',
       password: 'hashedPassword',
-      is_activated: true,
-      refresh_token: null,
+      is_activated: false,
+      refresh_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
       last_signout_at: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
+      created_at: expect.any(Date),
+      updated_at: expect.any(Date),
+      passwords: [],
+      provider: 'local',
+      _originalEmail: 'test@test.com',
+      checkEmailImmutable: jest.fn(),
+      loadOriginalEmail: jest.fn(),
+    } as unknown as User;
 
     const updatedUser = {
       ...mockUser,
@@ -632,12 +693,12 @@ describe('UsersService', () => {
       (userRepository.save as jest.Mock).mockResolvedValue(updatedUser);
 
       const result = await userService.updatedUserRefreshToken(
-        '1',
+        '2b66e3f8-124b-4d49-811d-6f419a973e05',
         'new-refresh-token',
       );
 
       expect(userRepository.findOne as jest.Mock).toHaveBeenCalledWith({
-        where: { id: '1' },
+        where: { id: '2b66e3f8-124b-4d49-811d-6f419a973e05' },
       });
       expect(userRepository.save).toHaveBeenCalledWith({
         ...mockUser,
@@ -655,10 +716,15 @@ describe('UsersService', () => {
         .mockRejectedValue(new NotFoundException(SysMessages.USER_NOT_FOUND));
 
       await expect(
-        userService.updatedUserRefreshToken('1', 'new-refresh-token'),
+        userService.updatedUserRefreshToken(
+          '2b66e3f8-124b-4d49-811d-6f419a973e05',
+          'new-refresh-token',
+        ),
       ).rejects.toThrow(NotFoundException);
 
-      expect(userService.findUserById).toHaveBeenCalledWith({ id: '1' });
+      expect(userService.findUserById).toHaveBeenCalledWith({
+        id: '2b66e3f8-124b-4d49-811d-6f419a973e05',
+      });
 
       expect(logger.error).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -686,18 +752,24 @@ describe('UsersService', () => {
   });
 
   describe('UserService - deleteUser', () => {
-    const userId = '123';
-    const mockUser: User = {
+    const userId = '2b66e3f8-124b-4d49-811d-6f419a973e05';
+    const mockUser = {
       id: userId,
-      username: 'testuser',
+      username: 'test',
       email: 'test@test.com',
       password: 'hashedPassword',
-      is_activated: true,
-      refresh_token: 'refreshtoken',
+      is_activated: false,
+      refresh_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
       last_signout_at: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
+      created_at: expect.any(Date),
+      updated_at: expect.any(Date),
+      passwords: [],
+      provider: 'local',
+      _originalEmail: 'test@test.com',
+      checkEmailImmutable: jest.fn(),
+      loadOriginalEmail: jest.fn(),
+    } as unknown as User;
 
     it('should delete user successfully', async () => {
       jest.spyOn(userService, 'findUserById').mockResolvedValue(mockUser);
@@ -858,21 +930,27 @@ describe('UsersService', () => {
   });
 
   describe('UserService - updateUser', () => {
-    const userId = '123';
-    const mockExistingUser = {
+    const userId = '2b66e3f8-124b-4d49-811d-6f419a973e05';
+    const mockExistingUser: User = {
       id: userId,
-      username: 'oldUsername',
-      email: 'old@test.com',
-      password: 'oldHashedPassword',
-      is_activated: true,
-      refresh_token: 'refreshtoken',
+      username: 'test',
+      email: 'test@test.com',
+      password: 'hashedPassword',
+      is_activated: false,
+      refresh_token:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxIiwiaWF0IjoxNjUwMjU0NjAwLCJleHAiOjE2NTI4NDY2MDB9.4j5D3vV7hRt5JkL8bY1Xz9qN2WQwYdT1oP3aKb6c7m8',
       last_signout_at: null,
-      created_at: new Date(),
-      updated_at: new Date(),
-    };
+      created_at: expect.any(Date),
+      updated_at: expect.any(Date),
+      passwords: [],
+      provider: 'local',
+      _originalEmail: 'test@test.com',
+      checkEmailImmutable: jest.fn(),
+      loadOriginalEmail: jest.fn(),
+    } as unknown as User;
+
     const updateData = {
       username: 'newUsername',
-      email: 'new@test.com',
       password: 'newPassword',
       is_activated: true,
       refresh_token: 'refreshtoken',
@@ -1001,6 +1079,60 @@ describe('UsersService', () => {
         code: null,
         email: null,
       });
+    });
+
+    it('should throw ConflictException when trying to update email via service', async () => {
+      const updateWithEmail = {
+        email: 'new@email.com',
+        username: 'validUpdate',
+      };
+
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockResolvedValue(mockExistingUser);
+
+      await expect(
+        userService.updateUser({ id: userId }, updateWithEmail),
+      ).rejects.toThrow(ConflictException);
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: SysMessages.UPDATE_USER_ERROR,
+          error: SysMessages.CANNOT_UPDATE_EMAIL,
+        }),
+      );
+    });
+
+    it('should maintain original email when other fields are updated', async () => {
+      const validUpdate = {
+        username: 'validUpdate',
+      };
+
+      jest
+        .spyOn(userService, 'findUserById')
+        .mockResolvedValue(mockExistingUser);
+      (userRepository.save as jest.Mock).mockImplementation((user) =>
+        Promise.resolve(user),
+      );
+
+      const result = await userService.updateUser({ id: userId }, validUpdate);
+
+      expect(result.email).toBe(mockExistingUser.email);
+      expect(result.username).toBe(validUpdate.username);
+    });
+
+    it('should throw Error when email is modified directly on entity (bypass check)', () => {
+      // This tests the @BeforeUpdate() hook directly
+      const user = new User();
+      user.email = 'original@email.com';
+      user.loadOriginalEmail(); // Simulate @AfterLoad
+
+      // Attempt to change email
+      user.email = 'new@email.com';
+
+      expect(() => user.checkEmailImmutable()).toThrowError(
+        SysMessages.CANNOT_UPDATE_EMAIL,
+      );
     });
   });
 });

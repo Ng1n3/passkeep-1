@@ -1,11 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  IsArray,
   IsEmail,
   IsString,
   Matches,
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { PasswordResponseDto } from '../../password/dto/password-response.dto';
+import { Password } from '../../password/entities/password.entity';
 
 export class CreateUserDto {
   @ApiProperty({
@@ -50,4 +53,12 @@ export class CreateUserDto {
   })
   @IsString()
   password_confirm: string;
+
+  @ApiProperty({
+    description: 'Array of password history (automatically populated)',
+    type: [PasswordResponseDto],
+    readOnly: true,
+  })
+  @IsArray()
+  passwords: Password[];
 }
